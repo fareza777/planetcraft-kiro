@@ -42,7 +42,7 @@ func setup(w: VoxelWorld, p: Player, f: Fx, s: Sfx, sk: SkyController, pl: Dicti
 	sky = sk
 	planet = pl
 	gravity = float(pl.get("gravity", 9.0))
-	cap = 9 if OS.has_feature("mobile") else 14
+	cap = 8 if OS.has_feature("mobile") else 14
 	for i in PROJ_POOL:
 		var mi := MeshInstance3D.new()
 		var sm := SphereMesh.new()

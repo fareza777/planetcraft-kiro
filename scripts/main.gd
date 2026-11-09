@@ -5,10 +5,17 @@ extends Node
 
 var menu: MainMenu
 var session: WorldRoot
+var music: Music
 
 
 func _ready() -> void:
+	music = Music.new()
+	add_child(music)
 	var args := OS.get_cmdline_user_args()
+	if args.has("menutest"):
+		show_menu()
+		_menu_shots()
+		return
 	if args.has("autotest"):
 		Game.start_new(4242)
 		for a in args:
@@ -56,3 +63,27 @@ func _on_travel(_pid: String) -> void:
 	_end_session()
 	Game.load_meta()
 	_start("arrive")
+
+
+func _menu_shots() -> void:
+	var dir := "user://" if OS.has_feature("mobile") else "res://test_output/"
+	await get_tree().create_timer(4.0).timeout
+	get_viewport().get_texture().get_image().save_png(dir + "menu_01_title.png")
+	menu._show_settings()
+	await get_tree().create_timer(1.0).timeout
+	get_viewport().get_texture().get_image().save_png(dir + "menu_02_settings.png")
+	menu._hide_overlay()
+	menu._show_new()
+	await get_tree().create_timer(1.0).timeout
+	get_viewport().get_texture().get_image().save_png(dir + "menu_03_new.png")
+	print("[MENUTEST] done")
+	get_tree().quit()
+
+
+func _process(_dt: float) -> void:
+	if music == null:
+		return
+	if session != null and is_instance_valid(session) and session.sky != null:
+		music.daylight = session.sky.daylight
+	else:
+		music.daylight = 0.8

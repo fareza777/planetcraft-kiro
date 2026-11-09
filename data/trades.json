@@ -1,0 +1,26 @@
+{
+  "currency": "credits_chip",
+  "sell": [
+    {"item": "o2_canister", "n": 2, "price": 2},
+    {"item": "power_cell", "n": 2, "price": 3},
+    {"item": "medkit", "n": 1, "price": 4},
+    {"item": "ration", "n": 3, "price": 2},
+    {"item": "tame_lure", "n": 1, "price": 3},
+    {"item": "fuel_cell", "n": 1, "price": 8},
+    {"item": "circuit", "n": 2, "price": 5},
+    {"item": "titan_ingot", "n": 2, "price": 6},
+    {"item": "suit_o2", "n": 1, "price": 18},
+    {"item": "rover_kit", "n": 1, "price": 30},
+    {"item": "nav_computer", "n": 1, "price": 25}
+  ],
+  "buy": [
+    {"item": "plant_fiber", "n": 8, "price": 1},
+    {"item": "biomass", "n": 6, "price": 1},
+    {"item": "raw_meat", "n": 4, "price": 1},
+    {"item": "lumen_shard", "n": 4, "price": 2},
+    {"item": "ferrite_ingot", "n": 4, "price": 2},
+    {"item": "aurium_ingot", "n": 1, "price": 3},
+    {"item": "artifact", "n": 1, "price": 10},
+    {"item": "void_shard", "n": 1, "price": 4}
+  ]
+}

@@ -38,8 +38,9 @@ var legs: Array[Node3D] = []
 var wings: Array[Node3D] = []
 var segments: Array[Node3D] = []
 var rings: Array[Node3D] = []
-var _mats: Array[StandardMaterial3D] = []
-var _base_cols: Array[Color] = []
+var _body_mat: StandardMaterial3D
+var _glow_mat: StandardMaterial3D
+var _boxes: Dictionary = {}
 var _trail: Array[Vector3] = []
 var hp_bar: MeshInstance3D
 
@@ -61,29 +62,74 @@ func setup(d: Dictionary, w: VoxelWorld, m: Node) -> void:
 
 # ---------------------------------------------------------------- body
 
-func _mat(c: Color, glow := false) -> StandardMaterial3D:
-	var m := StandardMaterial3D.new()
-	m.albedo_color = c
-	if glow:
-		m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		m.albedo_color = c * 1.3
-	else:
-		m.roughness = 0.85
-	_mats.append(m)
-	_base_cols.append(m.albedo_color)
-	return m
+## Parts are recorded per animated joint and merged into one mesh per (joint, glow) pair,
+## so a creature costs a handful of draw calls instead of one per box.
+func _mat(c: Color, glow := false) -> Dictionary:
+	return {"c": c * 1.3 if glow else c, "glow": glow}
 
 
-func _part(parent: Node3D, sz: Vector3, pos: Vector3, mat: StandardMaterial3D) -> MeshInstance3D:
-	var mi := MeshInstance3D.new()
-	var b := BoxMesh.new()
-	b.size = sz
-	mi.mesh = b
-	mi.material_override = mat
-	mi.position = pos
-	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	parent.add_child(mi)
-	return mi
+func _part(parent: Node3D, sz: Vector3, pos: Vector3, m: Dictionary, rot := Vector3.ZERO) -> void:
+	if not _boxes.has(parent):
+		_boxes[parent] = []
+	_boxes[parent].append([sz, pos, rot, m.c, m.glow])
+
+
+const _FACES := [
+	[Vector3(1, 0, 0), Vector3(0, 1, 0), Vector3(0, 0, 1)],
+	[Vector3(-1, 0, 0), Vector3(0, 0, 1), Vector3(0, 1, 0)],
+	[Vector3(0, 1, 0), Vector3(0, 0, 1), Vector3(1, 0, 0)],
+	[Vector3(0, -1, 0), Vector3(1, 0, 0), Vector3(0, 0, 1)],
+	[Vector3(0, 0, 1), Vector3(1, 0, 0), Vector3(0, 1, 0)],
+	[Vector3(0, 0, -1), Vector3(0, 1, 0), Vector3(1, 0, 0)],
+]
+
+
+func _finalize() -> void:
+	_body_mat = StandardMaterial3D.new()
+	_body_mat.vertex_color_use_as_albedo = true
+	_body_mat.roughness = 0.85
+	_body_mat.emission_enabled = true
+	_body_mat.emission = Color(0, 0, 0)
+	_glow_mat = StandardMaterial3D.new()
+	_glow_mat.vertex_color_use_as_albedo = true
+	_glow_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	for parent in _boxes:
+		for glow in [false, true]:
+			var st := SurfaceTool.new()
+			st.begin(Mesh.PRIMITIVE_TRIANGLES)
+			var any := false
+			for b in _boxes[parent]:
+				if b[4] != glow:
+					continue
+				any = true
+				var basis := Basis.from_euler(b[2])
+				var h: Vector3 = b[0] * 0.5
+				var col: Color = b[3]
+				for f in _FACES:
+					var n: Vector3 = f[0]
+					var u: Vector3 = f[1]
+					var v: Vector3 = f[2]
+					var hn := absf(h.dot(n))
+					var hu := absf(h.dot(u))
+					var hv := absf(h.dot(v))
+					var shade := 1.0 if n.y > 0.5 else (0.6 if n.y < -0.5 else 0.82)
+					var c := Color(col.r * shade, col.g * shade, col.b * shade) if not glow else col
+					var cs := []
+					for k in [[-1, -1], [1, -1], [1, 1], [-1, 1]]:
+						var lp: Vector3 = n * hn + u * hu * k[0] + v * hv * k[1]
+						cs.append(basis * lp + b[1])
+					var wn: Vector3 = basis * n
+					for idx in [0, 2, 1, 0, 3, 2]:
+						st.set_color(c)
+						st.set_normal(wn)
+						st.add_vertex(cs[idx])
+			if any:
+				var mi := MeshInstance3D.new()
+				mi.mesh = st.commit()
+				mi.material_override = _glow_mat if glow else _body_mat
+				mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+				parent.add_child(mi)
+	_boxes.clear()
 
 
 func _joint(parent: Node3D, pos: Vector3) -> Node3D:
@@ -134,8 +180,7 @@ func _build() -> void:
 			for k in 3:
 				for lx in [-1, 1]:
 					var j := _joint(pivot, Vector3(lx * 0.33 * s, 0.3 * s, (k - 1) * 0.3 * s))
-					var leg := _part(j, Vector3(0.45 * s, 0.07 * s, 0.07 * s), Vector3(lx * 0.22 * s, -0.12 * s, 0), ma)
-					leg.rotation.z = lx * 0.6
+					_part(j, Vector3(0.45 * s, 0.07 * s, 0.07 * s), Vector3(lx * 0.22 * s, -0.12 * s, 0), ma, Vector3(0, 0, lx * 0.6))
 					legs.append(j)
 		"flyer":
 			height = 0.4 * s
@@ -177,8 +222,7 @@ func _build() -> void:
 			var r := _joint(pivot, Vector3.ZERO)
 			for k in 4:
 				var a := k * PI / 2.0
-				var rp := _part(r, Vector3(0.95 * s, 0.08 * s, 0.1 * s), Vector3(cos(a) * 0.5 * s, 0, sin(a) * 0.5 * s), ma)
-				rp.rotation.y = -a + PI / 2
+				_part(r, Vector3(0.95 * s, 0.08 * s, 0.1 * s), Vector3(cos(a) * 0.5 * s, 0, sin(a) * 0.5 * s), ma, Vector3(0, -a + PI / 2, 0))
 			rings.append(r)
 		"boss":
 			height = 2.4 * s * 0.5
@@ -189,10 +233,10 @@ func _build() -> void:
 				r.rotation.x = rr * PI / 2.5
 				for k in 8:
 					var a := k * TAU / 8.0
-					var bp := _part(r, Vector3(0.5, 0.18, 0.18) * s * 0.5, Vector3(cos(a), 0, sin(a)) * 1.6 * s * 0.5, mg if k % 2 == 0 else ma)
-					bp.rotation.y = -a
+					_part(r, Vector3(0.5, 0.18, 0.18) * s * 0.5, Vector3(cos(a), 0, sin(a)) * 1.6 * s * 0.5, mg if k % 2 == 0 else ma, Vector3(0, -a, 0))
 				rings.append(r)
 			half = 0.8 * s * 0.5
+	_finalize()
 	_build_hp_bar()
 
 
@@ -304,8 +348,7 @@ func tick(dt: float, player: Player, near: bool) -> void:
 		_animate(dt)
 	if flash > 0.0:
 		flash -= dt
-		for i in _mats.size():
-			_mats[i].albedo_color = Color(1, 1, 1) if flash > 0.0 else _base_cols[i]
+		_body_mat.emission = Color(1, 1, 1) * (0.9 if flash > 0.0 else 0.0)
 
 
 func _think(player: Player, d: float) -> void:

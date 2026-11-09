@@ -33,6 +33,9 @@ var planets: Dictionary = {}
 var planet_order: Array = []
 var creatures: Dictionary = {}
 var quests: Array = []
+var npcs: Dictionary = {}
+var side_quests: Dictionary = {}
+var trades: Dictionary = {}
 
 var _icon_cache: Dictionary = {}
 
@@ -51,6 +54,12 @@ func _ready() -> void:
 			creatures[c.id] = c
 	if FileAccess.file_exists(DATA_DIR + "quests.json"):
 		quests = _read_json("quests.json")
+	for n in _read_json("npcs.json"):
+		npcs[n.id] = n
+	for s in _read_json("side_quests.json"):
+		side_quests[s.id] = s
+	var tr = JSON.parse_string(FileAccess.get_file_as_string(DATA_DIR + "trades.json"))
+	trades = tr if tr is Dictionary else {}
 	print("[Reg] loaded %d tiles, %d blocks, %d items, %d recipes, %d planets in %d ms" % [
 		tile_defs.size(), blocks.size(), items.size(), recipes.size(), planets.size(), Time.get_ticks_msec() - t0])
 
@@ -122,7 +131,8 @@ func _load_blocks() -> void:
 		emissive[id] = 1 if d.get("emissive", false) else 0
 		hardness[id] = float(d.get("hard", 1.0))
 		tier[id] = int(d.get("tier", 0))
-		light_radius[id] = float(d.get("light", 0.0))
+		# negative radius marks wind-swayed foliage (no light); positive = lamp radius
+		light_radius[id] = -1.0 if d.get("sway", false) else float(d.get("light", 0.0))
 		var tex: Dictionary = d.get("tex", {})
 		for f in 6:
 			var key: String = FACE_KEYS[f]

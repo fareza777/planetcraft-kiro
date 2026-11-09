@@ -1,0 +1,20 @@
+[
+  {"id": "ossa", "name": "Ossa Venn", "role": "Trader", "planet": "verdania", "offset": [0, 0, 0], "suit": "#e88a1f", "visor": "#4fe3ff", "trade": true,
+   "greet": ["Another crash survivor! Welcome to Haven Outpost. I trade in anything that isn't nailed down.", "Credits, chips, rations. If you have it, I'll buy it.", "The stalkers come out at night. Keep a light on, friend."],
+   "jobs": ["ossa_fiber", "ossa_meat", "ossa_aurium"]},
+  {"id": "rook", "name": "Rook Adeyemi", "role": "Engineer", "planet": "verdania", "offset": [4, 0, 2], "suit": "#5e6777", "visor": "#ffcf4a",
+   "greet": ["Our relay tower is dead and so is half the outpost. Help me fix things and I'll share my blueprints.", "Power is everything out here. Solar by day, batteries by night.", "Ever wondered who built those ruins? I have. Every single night."],
+   "jobs": ["rook_plates", "rook_solar", "rook_circuits"]},
+  {"id": "vela", "name": "Dr. Vela Iqbal", "role": "Xenobiologist", "planet": "verdania", "offset": [-4, 0, 2], "suit": "#2fa794", "visor": "#ff7af0",
+   "greet": ["Every creature here glows. I want to know why. Bring me samples.", "Mossbacks are gentle. Feed one a Bio Lure and it will follow you anywhere.", "If we could seed this world with life... imagine."],
+   "jobs": ["vela_samples", "vela_stalkers", "vela_tame"]},
+  {"id": "halvik", "name": "Halvik Strand", "role": "Stranded miner", "planet": "kryos", "offset": [3, 0, 3], "suit": "#9dd6ee", "visor": "#ffffff",
+   "greet": ["You came for the titanium too? Then you'll want to stay warm. Frostmaws don't like visitors.", "Bring me heat and I'll pay you in metal."],
+   "jobs": ["halvik_heat", "halvik_frostmaw"]},
+  {"id": "sira", "name": "Sira Kade", "role": "Ruin hunter", "planet": "aridus", "offset": [3, 0, 3], "suit": "#eda866", "visor": "#ff5ad0",
+   "greet": ["The dunes hide whole cities. And the cities hide Sentinels.", "Find me precursor caches and I'll make it worth your while."],
+   "jobs": ["sira_caches", "sira_wyrm"]},
+  {"id": "kade", "name": "Warden Kade-7", "role": "Precursor archive", "planet": "nullara", "offset": [3, 0, 3], "suit": "#3b4358", "visor": "#a65cff",
+   "greet": ["…signal acquired. You are the first organic to reach the Anomaly in ten thousand cycles.", "The Guardian protects the warp heart. Defeat it, and the stars open."],
+   "jobs": ["kade_void"]}
+]

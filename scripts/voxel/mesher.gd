@@ -172,6 +172,7 @@ static func _mesh_section(pd: PackedByteArray, s: int, kinds: PackedByteArray, t
 									layer = LAYER_FLUID
 								if vis:
 									var light := 15
+									var sw := 0
 									var ao := 0xFF
 									if not (d == 1 and (ny < 0 or ny >= H)):
 										var col: int = ni / H
@@ -191,7 +192,9 @@ static func _mesh_section(pd: PackedByteArray, s: int, kinds: PackedByteArray, t
 											var a2 := _ao(up, vp, occ[pd[ni + su + sv]])
 											var a3 := _ao(um, vp, occ[pd[ni - su + sv]])
 											ao = a0 | (a1 << 2) | (a2 << 4) | (a3 << 6)
-									key = (tiles[id * 6 + face] + 1) | (ao << 8) | (light << 16) | (emis[id] << 20) | (layer << 21)
+									if layer == LAYER_CUTOUT and emis[id] == 0 and lightr[id] < 0.0:
+										sw = 1
+									key = (tiles[id * 6 + face] + 1) | (ao << 8) | (light << 16) | (emis[id] << 20) | (layer << 21) | (sw << 23)
 									any_face = true
 						mask[a + CS * b] = key
 				if not any_face:
@@ -262,7 +265,7 @@ static func _quad(buf: Buf, d: int, u: int, v: int, sgn: int, i: int, a: int, b:
 		else:
 			uv = Vector2(p.x, p.z)
 		buf.uv.append(uv)
-		buf.uv2.append(Vector2(tile, 0.0))
+		buf.uv2.append(Vector2(tile, 2.0 if ((key >> 23) & 1) == 1 else 0.0))
 	var flip: bool = aos[0] + aos[2] < aos[1] + aos[3]
 	if sgn > 0:
 		if flip:

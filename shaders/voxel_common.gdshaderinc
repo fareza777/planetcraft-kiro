@@ -23,13 +23,19 @@ varying flat float noclamp;
 
 void vertex() {
 	layer = UV2.x;
-	noclamp = UV2.y;
-	// Plants: sway the top vertices in the wind.
+	// UV2.y: 0 = solid face, 1 = cross plant (clamped UV), 2 = foliage that sways
+	float kind = UV2.y;
+	noclamp = (kind > 0.5 && kind < 1.5) ? 1.0 : 0.0;
+	vec3 wp0 = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+	float ph = wp0.x * 0.7 + wp0.z * 0.5;
 	if (noclamp > 0.5 && UV.y < 0.5) {
-		vec3 wp0 = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
-		float ph = wp0.x * 0.7 + wp0.z * 0.5;
-		VERTEX.x += sin(time_s * 1.7 + ph) * 0.07 * wind;
-		VERTEX.z += cos(time_s * 1.3 + ph * 1.3) * 0.05 * wind;
+		VERTEX.x += sin(time_s * 1.7 + ph) * 0.08 * wind;
+		VERTEX.z += cos(time_s * 1.3 + ph * 1.3) * 0.06 * wind;
+	} else if (kind > 1.5) {
+		float gust = 0.6 + 0.4 * sin(time_s * 0.35 + wp0.x * 0.05);
+		VERTEX.x += sin(time_s * 1.1 + ph + wp0.y * 0.8) * 0.045 * wind * gust;
+		VERTEX.y += sin(time_s * 1.7 + ph * 1.7) * 0.02 * wind * gust;
+		VERTEX.z += cos(time_s * 0.9 + ph * 1.2) * 0.04 * wind * gust;
 	}
 	wpos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 	vec3 n = NORMAL;

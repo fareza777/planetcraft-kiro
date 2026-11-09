@@ -820,8 +820,41 @@ static func make_icon(def: Dictionary, seed: int) -> Image:
 			_rect(img, 13, 8, 6, 8, cols[2])
 		_:
 			_rect(img, 8, 8, 16, 16, cols[1])
+	_polish(img)
 	_outline(img)
+	_shadow(img)
 	return img
+
+
+## Rim light on top-left edges, inner shadow on bottom-right edges: gives flat shapes volume.
+static func _polish(img: Image) -> void:
+	var src: Image = img.duplicate()
+	for y in S:
+		for x in S:
+			var c := src.get_pixel(x, y)
+			if c.a < 0.5:
+				continue
+			var up := y == 0 or src.get_pixel(x, y - 1).a < 0.5
+			var lf := x == 0 or src.get_pixel(x - 1, y).a < 0.5
+			var dn := y == S - 1 or src.get_pixel(x, y + 1).a < 0.5
+			var rt := x == S - 1 or src.get_pixel(x + 1, y).a < 0.5
+			if up or lf:
+				c = c.lightened(0.28)
+			elif dn or rt:
+				c = c.darkened(0.3)
+			else:
+				# soft vertical gradient for depth
+				c = c.lightened(0.08 * (1.0 - y / float(S))) if y < S / 2 else c.darkened(0.1 * (y / float(S) - 0.5))
+			img.set_pixel(x, y, c)
+
+
+## 1-pixel soft drop shadow down-right of the silhouette.
+static func _shadow(img: Image) -> void:
+	var src: Image = img.duplicate()
+	for y in range(S - 1, 0, -1):
+		for x in range(S - 1, 0, -1):
+			if src.get_pixel(x, y).a < 0.1 and src.get_pixel(x - 1, y - 1).a > 0.5:
+				img.set_pixel(x, y, Color(0, 0, 0, 0.35))
 
 
 static func _poly(img: Image, pts: PackedVector2Array, c: Color) -> void:

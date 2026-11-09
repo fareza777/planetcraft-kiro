@@ -7,7 +7,7 @@ const SAVE_DIR := "user://saves/slot0/"
 const SETTINGS_PATH := "user://settings.cfg"
 const SAVE_VERSION := 1
 
-var settings := {"render_distance": 6, "sensitivity": 1.0, "show_fps": true, "glow": true, "touch": true, "render_scale": 1.0, "clouds": true}
+var settings := {"render_distance": 6, "sensitivity": 1.0, "show_fps": true, "glow": true, "touch": true, "render_scale": 1.0, "clouds": true, "button_scale": 1.0, "invert_y": false, "master_volume": 0.85, "ambience": 0.7}
 var world_seed := 0
 var planet_id := "verdania"
 var continue_requested := false
@@ -19,6 +19,13 @@ func _ready() -> void:
 	if not OS.has_feature("mobile") and not DisplayServer.is_touchscreen_available():
 		settings.touch = false
 	apply_render_scale()
+	apply_audio()
+
+
+func apply_audio() -> void:
+	var v := clampf(float(settings.master_volume), 0.0, 1.0)
+	AudioServer.set_bus_volume_db(0, linear_to_db(maxf(v, 0.0001)))
+	AudioServer.set_bus_mute(0, v <= 0.001)
 
 
 func apply_render_scale() -> void:

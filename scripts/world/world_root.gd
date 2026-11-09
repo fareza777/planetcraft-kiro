@@ -29,6 +29,8 @@ var touch: TouchControls
 var inv_screen: InventoryScreen
 var pause_menu: PauseMenu
 var machine_panel: MachinePanel
+var dialog: DialogPanel
+var npcs: Npcs
 var loading: Control
 var fade: ColorRect
 var _loading_lbl: Label
@@ -111,8 +113,16 @@ func start(pid: String, start_mode: String) -> void:
 	events.announce.connect(func(t: String, c: Color) -> void: hud.toast(t, c))
 	quests.inv = player.inv
 	quests.completed.connect(_on_quest_done)
+	quests.started.connect(_on_quest_started)
+	quests.side_ready.connect(func(q: Dictionary) -> void:
+		sfx.play("quest", -6.0)
+		hud.toast("Job ready to turn in: %s (%s)" % [q.title, Reg.npcs.get(q.giver, {}).get("name", "")], TF.GREEN))
+	quests.side_done.connect(_on_side_done)
 	Game.crafted.connect(_on_crafted)
 	_load_player()
+	npcs = Npcs.new()
+	add_child(npcs)
+	npcs.setup(world, player, planet, quests, _state, spawn_point)
 	world.focus = player.global_position
 	_build_ui()
 	_apply_settings()
@@ -267,6 +277,11 @@ func _build_ui() -> void:
 	machine_panel.closed.connect(_on_modal_closed)
 	machine_panel.travel.connect(_begin_travel)
 	root.add_child(machine_panel)
+	dialog = DialogPanel.new()
+	dialog.visible = false
+	dialog.closed.connect(_on_modal_closed)
+	dialog.talked.connect(func(id: String) -> void: quests.event("talk", id))
+	root.add_child(dialog)
 	pause_menu = PauseMenu.new()
 	pause_menu.visible = false
 	pause_menu.action.connect(_on_pause_action)
@@ -369,6 +384,50 @@ func _slow_update() -> void:
 	if float(evolution.stats.life) >= 1.0:
 		quests.event("stat", "life")
 	_update_ship_models()
+	_update_waypoint()
+
+
+func _update_waypoint() -> void:
+	var q := quests.current()
+	hud.info.waypoint = null
+	if q.is_empty():
+		return
+	var g: Dictionary = q.goal
+	if g.type == "talk":
+		var p = npcs.position_of(g.id)
+		if p != null:
+			hud.info.waypoint = p + Vector3(0, 2.0, 0)
+			hud.info.wp_label = Reg.npcs.get(g.id, {}).get("name", "Contact")
+	elif g.type == "boss" and planet.has("boss") and not creatures.boss_done:
+		hud.info.waypoint = Vector3(creatures.boss_pos.x, player.global_position.y + 8.0, creatures.boss_pos.z)
+		hud.info.wp_label = "Anomaly"
+	elif g.type == "ship" or (g.type == "visit_any" and planet.id == "verdania"):
+		var pads := machines.positions("launchpad")
+		if not pads.is_empty():
+			hud.info.waypoint = Vector3(pads[0]) + Vector3(0.5, 3.0, 0.5)
+			hud.info.wp_label = "Launch pad"
+	if hud.info.waypoint == null:
+		for sid in quests.side:
+			if quests.side_complete(sid):
+				var p2 = npcs.position_of(Reg.side_quests[sid].giver)
+				if p2 != null:
+					hud.info.waypoint = p2 + Vector3(0, 2.0, 0)
+					hud.info.wp_label = "Turn in: " + Reg.side_quests[sid].title
+					break
+
+
+func _on_quest_started(q: Dictionary) -> void:
+	if q.has("story"):
+		hud.story(q.get("speaker", "ECHO"), q.story)
+
+
+func _on_side_done(q: Dictionary) -> void:
+	sfx.play("quest", 0.0)
+	hud.toast("✔ Job complete: " + q.title, TF.GREEN)
+	for r in q.get("reward", []):
+		player.inv.add(r[0], int(r[1]))
+		hud.toast("Reward: %s ×%d" % [Reg.item_label(r[0]), int(r[1])], TF.GREEN)
+	player.xp += int(q.get("xp", 0))
 
 
 func _update_environment(dt: float) -> void:
@@ -502,8 +561,9 @@ func _on_arrived() -> void:
 		if rep.veggies + rep.ingots + rep.ore > 0:
 			hud.toast("While you were away (%d min): +%d veggies, +%d ingots, +%d ore in machine storage" % [int(rep.seconds / 60), rep.veggies, rep.ingots, rep.ore], TF.GREEN)
 	hud.toast(planet.name + " — " + planet.desc, TF.TEXT)
-	if mode == "new":
-		hud.toast("Objective: " + quests.tracker_text(), TF.AMBER)
+	var cq := quests.current()
+	if mode == "new" and cq.has("story"):
+		hud.story(cq.get("speaker", "ECHO"), cq.story)
 
 
 # ------------------------------------------------------------------ events
@@ -566,6 +626,16 @@ func _on_boss_defeated() -> void:
 
 
 func _on_use() -> void:
+	# 0) NPCs
+	var npc := npcs.ray_npc(player.eye_pos(), player.look_dir(), 6.0)
+	if npc != null:
+		touch.reset()
+		touch.enabled = false
+		_release_mouse()
+		player.set_process(false)
+		dialog.open(self, npc.def.id)
+		sfx.play("ui")
+		return
 	# 1) rover
 	if rover != null and not rover.driving and _ray_hits(rover.global_position + Vector3(0, 1, 0), 1.8):
 		_enter_rover()
@@ -706,7 +776,7 @@ func open_inventory() -> void:
 	touch.reset()
 	touch.enabled = false
 	_release_mouse()
-	inv_screen.open(player, machines.stations_near(player.global_position, 5.5))
+	inv_screen.open(player, machines.stations_near(player.global_position, 5.5), quests, evolution)
 	player.set_process(false)
 	sfx.play("ui")
 
@@ -761,6 +831,7 @@ func save() -> void:
 	st["last_time"] = Time.get_unix_time_from_system()
 	if rover != null:
 		st["rover"] = {"pos": rover.global_position, "heading": rover.heading}
+	st.merge(npcs.save_data(), true)
 	Game.save_state(planet.id, st)
 	Game.write_meta({
 		"spawn": spawn_point,

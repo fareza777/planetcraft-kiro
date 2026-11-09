@@ -38,13 +38,14 @@ func _ready() -> void:
 func _layout() -> void:
 	var w := size.x
 	var h := size.y
+	var k := float(Game.settings.get("button_scale", 1.0))
 	_buttons = {
-		"jump": {"pos": Vector2(w - 110, h - 150), "r": 62.0, "label": "JUMP", "hold": true},
-		"mine": {"pos": Vector2(w - 250, h - 110), "r": 54.0, "label": "MINE", "hold": true},
-		"use": {"pos": Vector2(w - 120, h - 300), "r": 50.0, "label": "USE", "hold": false},
-		"sprint": {"pos": Vector2(w - 260, h - 250), "r": 40.0, "label": "RUN", "hold": false},
-		"inv": {"pos": Vector2(w - 150, 50), "r": 36.0, "label": "BAG", "hold": false},
-		"menu": {"pos": Vector2(w - 60, 50), "r": 36.0, "label": "II", "hold": false},
+		"jump": {"pos": Vector2(w - 110 * k, h - 150 * k), "r": 62.0 * k, "label": "JUMP", "icon": "jump", "col": Color(0.31, 0.89, 1.0)},
+		"mine": {"pos": Vector2(w - 250 * k, h - 105 * k), "r": 56.0 * k, "label": "MINE", "icon": "mine", "col": Color(1.0, 0.69, 0.18)},
+		"use": {"pos": Vector2(w - 125 * k, h - 305 * k), "r": 50.0 * k, "label": "USE", "icon": "use", "col": Color(0.48, 1.0, 0.6)},
+		"sprint": {"pos": Vector2(w - 265 * k, h - 250 * k), "r": 40.0 * k, "label": "RUN", "icon": "run", "col": Color(0.85, 0.75, 1.0)},
+		"inv": {"pos": Vector2(w - 150, 50), "r": 36.0, "label": "", "icon": "bag", "col": Color(0.31, 0.89, 1.0)},
+		"menu": {"pos": Vector2(w - 60, 50), "r": 36.0, "label": "", "icon": "pause", "col": Color(0.9, 0.95, 1.0)},
 	}
 
 
@@ -123,6 +124,8 @@ func _input(event: InputEvent) -> void:
 			var delta := d.position - _look_last
 			_look_last = d.position
 			_look_moved += delta.length()
+			if Game.settings.get("invert_y", false):
+				delta.y = -delta.y
 			player.ctl.look += delta * 0.0042 * sensitivity
 		get_viewport().set_input_as_handled()
 
@@ -166,11 +169,21 @@ func _draw() -> void:
 		var hint := Vector2(170, size.y - 170)
 		draw_arc(hint, JOY_R * 0.8, 0, TAU, 48, Color(1, 1, 1, 0.12), 2.0, true)
 		draw_circle(hint, 26, Color(1, 1, 1, 0.1))
+	var t := Time.get_ticks_msec() / 1000.0
 	for n in _buttons:
 		var b: Dictionary = _buttons[n]
 		var held: bool = _held.has(n) or (n == "sprint" and sprint_toggle) or (n == "mine" and _long_mine)
-		draw_circle(b.pos, b.r, Color(0.31, 0.89, 1.0, 0.4) if held else Color(0.04, 0.04, 0.1, 0.45))
-		draw_arc(b.pos, b.r, 0, TAU, 40, TF.AMBER if held else Color(0.31, 0.89, 1.0, 0.6), 3.0, true)
-		var fs := 18 if b.r > 45 else 16
-		var tw := font.get_string_size(b.label, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
-		draw_string(font, b.pos + Vector2(-tw * 0.5, fs * 0.35), b.label, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(1, 1, 1, 0.9))
+		var col: Color = b.col
+		var r: float = b.r * (0.92 if held else 1.0)
+		draw_circle(b.pos + Vector2(0, 3), r, Color(0, 0, 0, 0.25))
+		draw_circle(b.pos, r, Color(col.r * 0.3, col.g * 0.3, col.b * 0.3, 0.55) if held else Color(0.03, 0.03, 0.09, 0.5))
+		draw_arc(b.pos, r - 1.5, 0, TAU, 48, Color(col.r, col.g, col.b, 0.95 if held else 0.55), 3.0, true)
+		if held:
+			draw_arc(b.pos, r + 5.0 + sin(t * 10.0) * 1.5, 0, TAU, 48, Color(col.r, col.g, col.b, 0.35), 2.0, true)
+		var label: String = b.label
+		var icon_y := -r * 0.12 if label != "" else 0.0
+		IconPainter.draw(self, b.icon, b.pos + Vector2(0, icon_y), r * (0.5 if label != "" else 0.62), Color(1, 1, 1, 0.95) if held else col.lightened(0.25))
+		if label != "":
+			var fs := int(clampf(r * 0.24, 11, 16))
+			var tw := font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+			draw_string(font, b.pos + Vector2(-tw * 0.5, r * 0.62), label, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(1, 1, 1, 0.75))
