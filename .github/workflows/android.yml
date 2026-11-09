@@ -1,0 +1,91 @@
+name: Android build
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  GODOT_VERSION: "4.7.2"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install Android build tools
+        run: sdkmanager --install "platform-tools" "build-tools;34.0.0" "platforms;android-34" > /dev/null
+
+      - name: Download Godot ${{ env.GODOT_VERSION }}
+        run: |
+          set -e
+          UA="Mozilla/5.0 (PlanetCraft CI)"
+          curl -fsSL -A "$UA" -o godot.zip \
+            "https://downloads.godotengine.org/?version=${GODOT_VERSION}&flavor=stable&slug=linux.x86_64.zip&platform=linux.64" \
+          || curl -fsSL -o godot.zip \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          unzip -q godot.zip
+          mv "Godot_v${GODOT_VERSION}-stable_linux.x86_64" godot
+          chmod +x godot
+          ./godot --version
+
+      - name: Fetch Android export templates (Android entries only)
+        run: python3 tools/fetch_android_templates.py "$GODOT_VERSION" "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
+
+      - name: Debug keystore and editor settings
+        run: |
+          set -e
+          keytool -genkeypair -keystore "$HOME/debug.keystore" -storepass android -alias androiddebugkey \
+            -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          mkdir -p "$HOME/.config/godot"
+          for f in editor_settings-4.7.tres editor_settings-4.tres; do
+          cat > "$HOME/.config/godot/$f" <<EOF
+          [gd_resource type="EditorSettings" format=3]
+
+          [resource]
+          export/android/android_sdk_path = "$ANDROID_SDK_ROOT"
+          export/android/java_sdk_path = "$JAVA_HOME"
+          export/android/debug_keystore = "$HOME/debug.keystore"
+          export/android/debug_keystore_user = "androiddebugkey"
+          export/android/debug_keystore_pass = "android"
+          EOF
+          done
+
+      - name: Import project
+        run: ./godot --headless --path . --import || true
+
+      - name: Headless tests
+        run: ./godot --headless --path . res://tests/test_scene.tscn
+
+      - name: Export debug APK
+        run: |
+          mkdir -p build
+          ./godot --headless --path . --export-debug "Android" build/PlanetCraft-debug.apk
+          ls -la build
+          test -s build/PlanetCraft-debug.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PlanetCraft-debug-apk
+          path: build/PlanetCraft-debug.apk
+          if-no-files-found: error
+
+      - name: Attach APK to release (tags only)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/PlanetCraft-debug.apk
