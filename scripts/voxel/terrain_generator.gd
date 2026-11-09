@@ -20,6 +20,8 @@ var replaceable := {}
 var crystal_block := 0
 var crystal_tries := 0
 var ruins_chance := 0.0
+var structure_chance := 0.0
+var structure_types: Array = []
 var cave_width := 0.1
 var cavern_thr := 0.6
 
@@ -80,6 +82,15 @@ func _init(p: Dictionary, world_seed: int) -> void:
 	crystal_block = _id(cr.get("block", "lumen_crystal"))
 	crystal_tries = int(cr.get("tries", 0))
 	ruins_chance = float(p.get("ruins", 0.0))
+	structure_chance = float(p.get("structures", 0.028))
+	match p.id:
+		"verdania": structure_types = ["obelisk", "wreck", "hive", "shrine", "hive"]
+		"kryos": structure_types = ["obelisk", "wreck", "wreck"]
+		"pyrrhos": structure_types = ["obelisk", "hive", "wreck"]
+		"aridus": structure_types = ["obelisk", "wreck", "hive", "obelisk"]
+		"nullara": structure_types = ["shrine", "obelisk", "shrine"]
+		"kessler": structure_types = ["wreck"]
+		_: structure_types = ["wreck"]
 
 
 func _setup(n: FastNoiseLite, salt: int, freq: float, oct: int, frac: int) -> void:
@@ -161,8 +172,11 @@ func generate_chunk(cx: int, cz: int, mods: Dictionary) -> PackedByteArray:
 	_gen_ores(b, rng, heights)
 	_gen_crystals(b, rng, heights)
 	_gen_surface(b, ox, oz, rng, heights, bidx)
-	if ruins_chance > 0.0 and rng.randf() < ruins_chance:
+	var roll := rng.randf()
+	if ruins_chance > 0.0 and roll < ruins_chance:
 		_gen_ruin(b, rng, heights)
+	elif roll < ruins_chance + structure_chance:
+		_gen_structure(b, rng, heights)
 	for i in mods:
 		b[i] = mods[i]
 	return b
@@ -414,6 +428,107 @@ func _tree(b: PackedByteArray, kind: String, x: int, y: int, z: int, rng: Random
 			for k in h:
 				_put(b, x, y + k, z, B.volcanic)
 			_put(b, x, y + h, z, B.ember_crystal)
+
+
+func _ground(heights: PackedInt32Array, x: int, z: int) -> int:
+	return heights[x + CS * z]
+
+
+func _gen_structure(b: PackedByteArray, rng: RandomNumberGenerator, heights: PackedInt32Array) -> void:
+	if structure_types.is_empty():
+		return
+	var kind: String = structure_types[rng.randi() % structure_types.size()]
+	var cx := 8
+	var cz := 8
+	var gy := _ground(heights, cx, cz)
+	if ptype == "asteroids":
+		gy = 60 + rng.randi_range(-10, 10)
+	if gy < 3 or gy > H - 20:
+		return
+	match kind:
+		"obelisk":
+			var brick: int = B.ruin_brick
+			var glyph: int = B.ruin_glyph
+			for dz in range(-3, 4):
+				for dx in range(-3, 4):
+					for y in range(gy - 3, gy + 1):
+						_put(b, cx + dx, y, cz + dz, brick, false)
+					for y in range(gy + 1, gy + 16):
+						_put(b, cx + dx, y, cz + dz, 0, false)
+			for y in range(gy + 1, gy + 15):
+				var r := 1 if y < gy + 9 else 0
+				for dz in range(-r, r + 1):
+					for dx in range(-r, r + 1):
+						_put(b, cx + dx, y, cz + dz, glyph if (y - gy) % 3 == 0 else brick, false)
+			_put(b, cx, gy + 15, cz, B.void_crystal if planet.id == "nullara" else B.lumen_crystal, false)
+			for c in [Vector2i(-3, -3), Vector2i(3, -3), Vector2i(-3, 3), Vector2i(3, 3)]:
+				for y in range(gy + 1, gy + 4):
+					_put(b, cx + c.x, y, cz + c.y, brick, false)
+				_put(b, cx + c.x, gy + 4, cz + c.y, B.lumen_crystal, false)
+			_put(b, cx, gy + 1, cz - 2, B.obelisk_core, false)
+		"wreck":
+			var hull: int = B.hull
+			var plate: int = B.metal_plate
+			var len := 12
+			for i in len:
+				var x := 2 + i
+				var yc := gy + 1 - int(i / 4)
+				for dy in range(-2, 3):
+					for dz in range(-2, 3):
+						var ring: bool = absi(dy) == 2 or absi(dz) == 2
+						if ring and rng.randf() > 0.22:
+							_put(b, x, yc + dy, cz + dz, hull if (i + dy) % 3 != 0 else plate, false)
+						elif not ring:
+							_put(b, x, yc + dy, cz + dz, 0, false)
+			for dz in range(-6, 7):
+				if absi(dz) > 2:
+					_put(b, 7, gy, cz + dz, plate, false)
+					_put(b, 8, gy, cz + dz, plate, false)
+			for dy in range(-1, 2):
+				for dz in range(-1, 2):
+					_put(b, 1, gy + 1 + dy, cz + dz, B.glass, false)
+			_put(b, 5, gy, cz, B.salvage_crate, false)
+			_put(b, 9, gy - 1, cz + 1, B.salvage_crate, false)
+			if rng.randf() < 0.5:
+				_put(b, 11, gy - 2, cz - 1, B.salvage_crate, false)
+			_put(b, 6, gy + 1, cz - 1, B.lamp, false)
+		"hive":
+			var hive: int = B.alien_hive
+			var r := 4
+			for dz in range(-r, r + 1):
+				for dx in range(-r, r + 1):
+					for dy in range(0, r + 1):
+						var d := sqrt(dx * dx + dz * dz + dy * dy * 1.6)
+						if d <= r and d > r - 1.3 and rng.randf() > 0.12:
+							_put(b, cx + dx, gy + dy, cz + dz, hive, false)
+						elif d <= r - 1.3:
+							_put(b, cx + dx, gy + dy, cz + dz, 0, false)
+			_put(b, cx, gy, cz, B.alien_hive, false)
+			_put(b, cx, gy + 1, cz, B.hive_core, false)
+			for k in 8:
+				var a := k * TAU / 8.0
+				var px := cx + int(round(cos(a) * (r + 1)))
+				var pz := cz + int(round(sin(a) * (r + 1)))
+				if px >= 0 and px < CS and pz >= 0 and pz < CS:
+					var gh := _ground(heights, px, pz)
+					if gh > 0:
+						_put(b, px, gh + 1, pz, B.glowshroom)
+		"shrine":
+			var brick: int = B.ruin_brick
+			var cr: int = B.void_crystal if planet.id == "nullara" else B.lumen_crystal
+			for dz in range(-2, 3):
+				for dx in range(-2, 3):
+					_put(b, cx + dx, gy, cz + dz, brick, false)
+					for y in range(gy + 1, gy + 7):
+						_put(b, cx + dx, y, cz + dz, 0, false)
+			_put(b, cx, gy + 1, cz, B.shrine_altar, false)
+			for k in 6:
+				var a := k * TAU / 6.0
+				var px := cx + int(round(cos(a) * 5.0))
+				var pz := cz + int(round(sin(a) * 5.0))
+				var h := rng.randi_range(3, 6)
+				for y in range(gy, gy + h):
+					_put(b, px, y, pz, brick if y == gy else cr, false)
 
 
 func _gen_ruin(b: PackedByteArray, rng: RandomNumberGenerator, heights: PackedInt32Array) -> void:

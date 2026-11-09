@@ -71,10 +71,12 @@ func _build_hand() -> void:
 	hand = Node3D.new()
 	hand.position = Vector3(0.32, -0.3, -0.55)
 	cam.add_child(hand)
-	var body := _box(Vector3(0.11, 0.11, 0.42), Color("3b4358"), Vector3.ZERO)
+	var suit: Array = Game.cosmetic("suit")
+	var body := _box(Vector3(0.11, 0.11, 0.42), suit[0], Vector3.ZERO)
 	hand.add_child(body)
-	hand.add_child(_box(Vector3(0.13, 0.05, 0.2), Color("ffb02e"), Vector3(0, 0.07, 0.05)))
-	hand.add_child(_box(Vector3(0.06, 0.06, 0.1), Color("4fe3ff"), Vector3(0, 0.0, -0.25), true))
+	hand.add_child(_box(Vector3(0.13, 0.05, 0.2), suit[1], Vector3(0, 0.07, 0.05)))
+	hand.add_child(_box(Vector3(0.06, 0.06, 0.1), suit[2], Vector3(0, 0.0, -0.25), true))
+	hand.add_child(_box(Vector3(0.115, 0.02, 0.3), suit[2], Vector3(0, -0.058, -0.02), true))
 	hand.add_child(_box(Vector3(0.08, 0.16, 0.08), Color("2a2f3c"), Vector3(0, -0.11, 0.12)))
 	beam = MeshInstance3D.new()
 	var bm := BoxMesh.new()
@@ -446,7 +448,7 @@ func _beam_to(to: Vector3) -> void:
 	beam.global_position = mid
 	beam.look_at(to, Vector3.UP if absf((to - from).normalized().y) < 0.99 else Vector3.RIGHT)
 	beam.scale = Vector3(1.0 + randf() * 0.6, 1.0 + randf() * 0.6, len)
-	_beam_mat.albedo_color = Color(0.45, 0.95, 1.0).lerp(Color(1, 1, 1), randf() * 0.4)
+	_beam_mat.albedo_color = (Game.cosmetic("laser")[0] as Color).lerp(Color(1, 1, 1), randf() * 0.35) * 1.3
 
 
 func _update_place(dt: float) -> void:

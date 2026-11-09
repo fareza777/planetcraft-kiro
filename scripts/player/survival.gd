@@ -26,6 +26,11 @@ func reset() -> void:
 
 
 func apply_upgrades(u: Dictionary) -> void:
+	if u.has("frostguard"):
+		u["thermal"] = true
+		u["armor"] = true
+	if u.has("wyrmjet"):
+		u["jet"] = true
 	upgrades = u
 	max_o2 = 200.0 if u.has("o2") else 100.0
 	max_hp = 150.0 if u.has("armor") else 100.0

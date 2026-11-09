@@ -111,6 +111,9 @@ func start(pid: String, start_mode: String) -> void:
 	add_child(events)
 	events.setup(world, sky, fx, sfx, player, planet, evolution)
 	events.announce.connect(func(t: String, c: Color) -> void: hud.toast(t, c))
+	events.creatures = creatures
+	creatures.killed.connect(func(id: String) -> void: quests.record_kill(id))
+	creatures.rare_drop.connect(func(src: String, item: String) -> void: quests.record_drop(src, item))
 	quests.inv = player.inv
 	quests.completed.connect(_on_quest_done)
 	quests.started.connect(_on_quest_started)
@@ -218,6 +221,9 @@ func _starting_kit() -> void:
 	inv.add("o2_canister", 3)
 	inv.add("power_cell", 2)
 	inv.add("lamp", 6)
+	for kit in Game.owned_kits():
+		for it in kit.get("items", []):
+			inv.add(it[0], int(it[1]))
 	player.selected = 0
 
 
@@ -346,6 +352,7 @@ func _process(dt: float) -> void:
 			OS.get_static_memory_usage() / 1048576.0])
 	_desktop_input(dt)
 	hud.info.driving = rover != null and rover.driving
+	hud.info.banner = events.banner
 	if rover != null and rover.driving:
 		rover.drive(dt, player.ctl)
 		player.global_position = rover.global_position + Vector3(0, 1.0, 0)
@@ -578,20 +585,25 @@ func _on_mined(pos: Vector3i, id: int) -> void:
 	var d := Reg.block_def(id)
 	evolution.on_mined()
 	quests.event("mine", d.name)
-	if d.get("loot", "") == "ruin":
+	var center := Vector3(pos) + Vector3(0.5, 0.5, 0.5)
+	var table: String = d.get("loot", "")
+	if table != "":
 		var rng := RandomNumberGenerator.new()
-		rng.seed = hash(pos) ^ Game.world_seed
-		var loot := [["artifact", 1], ["data_core", 1], ["circuit", rng.randi_range(1, 3)], ["lumen_shard", rng.randi_range(2, 5)], ["aurium_chunk", rng.randi_range(1, 4)], ["fuel_cell", 1], ["alloy_plate", rng.randi_range(1, 2)]]
-		for k in 3:
-			var l: Array = loot[rng.randi() % loot.size()]
-			player.inv.add(l[0], l[1])
-			hud.toast("Recovered %s ×%d" % [Reg.item_label(l[0]), l[1]], TF.AMBER)
+		rng.seed = hash(pos) ^ Game.world_seed ^ Time.get_ticks_msec()
+		creatures.spawn_loot(center, Reg.roll_loot(table, rng), table)
 		sfx.play("quest", -2.0)
-		fx.sparks(Vector3(pos) + Vector3(0.5, 0.5, 0.5), Color(1, 0.8, 0.3), 30)
-		if rng.randf() < 0.6:
+		fx.sparks(center, Color(1, 0.8, 0.3), 30)
+		if table == "ruin" and rng.randf() < 0.6:
 			for k in 2:
-				creatures.spawn("sentinel", Vector3(pos) + Vector3(rng.randf_range(-6, 6), 6, rng.randf_range(-6, 6)))
+				creatures.spawn("sentinel", center + Vector3(rng.randf_range(-6, 6), 6, rng.randf_range(-6, 6)), false, rng.randf() < 0.15)
 			hud.toast("⚠ Precursor Sentinels activated!", TF.RED)
+		elif table == "hive":
+			for k in 4:
+				creatures.spawn("hive_drone", center + Vector3(rng.randf_range(-3, 3), 1, rng.randf_range(-3, 3)))
+			hud.toast("The hive shrieks! Its drones swarm out.", TF.RED)
+			sfx.play("growl", 0.0, 1.4)
+	elif d.name == "alien_hive" and randf() < 0.25:
+		creatures.spawn("hive_drone", center + Vector3(randf_range(-2, 2), 1, randf_range(-2, 2)))
 
 
 func _on_placed(pos: Vector3i, id: int) -> void:
@@ -640,9 +652,16 @@ func _on_use() -> void:
 	if rover != null and not rover.driving and _ray_hits(rover.global_position + Vector3(0, 1, 0), 1.8):
 		_enter_rover()
 		return
-	# 2) machine panel
+	# 2) structure events and machine panels
 	if not player.target.is_empty():
 		var id: int = player.target.id
+		var ev: String = Reg.block_def(id).get("event", "")
+		if ev == "trial":
+			events.start_trial(player.target.pos)
+			return
+		elif ev == "starfall":
+			events.start_starfall(player.target.pos)
+			return
 		if machines.is_interactive(id):
 			_open_machine(player.target.pos, id)
 			return
@@ -730,11 +749,12 @@ func _update_ship_models() -> void:
 
 func _build_ship_model() -> Node3D:
 	var n := Node3D.new()
+	var liv: Array = Game.cosmetic("ship")
 	var parts := [
-		[Vector3(2.2, 1.2, 5.0), Vector3(0, 1.6, 0), Color("3b4358"), false],
-		[Vector3(1.6, 0.9, 1.8), Vector3(0, 2.4, -1.4), Color("4fe3ff"), true],
+		[Vector3(2.2, 1.2, 5.0), Vector3(0, 1.6, 0), liv[0], false],
+		[Vector3(1.6, 0.9, 1.8), Vector3(0, 2.4, -1.4), liv[2], true],
 		[Vector3(6.5, 0.25, 2.2), Vector3(0, 1.4, 0.8), Color("30374a"), false],
-		[Vector3(6.6, 0.12, 0.3), Vector3(0, 1.55, 1.8), Color("e88a1f"), false],
+		[Vector3(6.6, 0.12, 0.3), Vector3(0, 1.55, 1.8), liv[1], false],
 		[Vector3(0.9, 0.9, 1.2), Vector3(-1.4, 1.5, 2.6), Color("2a2f3c"), false],
 		[Vector3(0.9, 0.9, 1.2), Vector3(1.4, 1.5, 2.6), Color("2a2f3c"), false],
 		[Vector3(0.6, 0.6, 0.2), Vector3(-1.4, 1.5, 3.25), Color("ffb02e"), true],
@@ -742,7 +762,7 @@ func _build_ship_model() -> Node3D:
 		[Vector3(0.2, 1.0, 0.2), Vector3(-1.2, 0.5, -1.2), Color("5e6777"), false],
 		[Vector3(0.2, 1.0, 0.2), Vector3(1.2, 0.5, -1.2), Color("5e6777"), false],
 		[Vector3(0.2, 1.0, 0.2), Vector3(0, 0.5, 2.0), Color("5e6777"), false],
-		[Vector3(0.3, 1.4, 1.6), Vector3(0, 2.6, 2.2), Color("3b4358"), false],
+		[Vector3(0.3, 1.4, 1.6), Vector3(0, 2.6, 2.2), liv[0], false],
 	]
 	for pt in parts:
 		var mi := MeshInstance3D.new()

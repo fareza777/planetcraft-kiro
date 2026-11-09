@@ -8,7 +8,7 @@ const TF := preload("res://scripts/ui/theme_factory.gd")
 
 var player: Player
 var sky: SkyController
-var info := {"planet": "", "biome": "", "fps": 0, "show_fps": true, "quest": "", "extra": "", "driving": false, "waypoint": null, "wp_label": ""}
+var info := {"planet": "", "biome": "", "fps": 0, "show_fps": true, "quest": "", "extra": "", "driving": false, "waypoint": null, "wp_label": "", "banner": ""}
 var _story_speaker := ""
 var _story_text := ""
 var _story_t := 0.0
@@ -119,6 +119,12 @@ func _draw() -> void:
 		_text(Vector2((size.x - ww) * 0.5, size.y * 0.3), st.warning, 30, TF.RED)
 	_draw_waypoint()
 	_draw_story()
+	if info.banner != "":
+		var bw := font.get_string_size(info.banner, HORIZONTAL_ALIGNMENT_LEFT, -1, 24).x
+		var br := Rect2((size.x - bw) * 0.5 - 24, 84, bw + 48, 44)
+		var pulse := 0.6 + 0.4 * sin(Time.get_ticks_msec() * 0.008)
+		draw_style_box(TF.box(Color(0.12, 0.05, 0.2, 0.85), Color(0.77, 0.54, 1.0, pulse), 10, 2, 0), br)
+		_text(Vector2((size.x - bw) * 0.5, 114), info.banner, 24, Color(0.9, 0.8, 1.0))
 	if info.driving:
 		var dt := "ROVER  ·  JUMP to exit  ·  drag right side to look around"
 		var dw := font.get_string_size(dt, HORIZONTAL_ALIGNMENT_LEFT, -1, 18).x

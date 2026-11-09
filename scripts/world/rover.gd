@@ -23,11 +23,12 @@ const MAX_SPEED := 13.0
 func _ready() -> void:
 	body = Node3D.new()
 	add_child(body)
-	var hull := Color("3b4358")
-	var accent := Color("ffb02e")
+	var paint: Array = Game.cosmetic("rover")
+	var hull: Color = paint[0]
+	var accent: Color = paint[1]
 	_box(body, Vector3(1.6, 0.45, 2.6), Vector3(0, 0.75, 0), hull)
 	_box(body, Vector3(1.3, 0.55, 1.1), Vector3(0, 1.2, -0.25), Color("2a2f3c"))
-	_box(body, Vector3(1.2, 0.35, 0.05), Vector3(0, 1.25, -0.82), Color("4fe3ff"), true)
+	_box(body, Vector3(1.2, 0.35, 0.05), Vector3(0, 1.25, -0.82), paint[2], true)
 	_box(body, Vector3(1.66, 0.1, 2.66), Vector3(0, 0.98, 0), accent)
 	_box(body, Vector3(0.25, 0.12, 0.05), Vector3(-0.55, 0.8, -1.31), Color("fff3c4"), true)
 	_box(body, Vector3(0.25, 0.12, 0.05), Vector3(0.55, 0.8, -1.31), Color("fff3c4"), true)

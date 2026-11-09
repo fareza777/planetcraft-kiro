@@ -1,32 +1,467 @@
 [
-  {"id": "mossback", "name": "Mossback", "plan": "quad", "size": 1.35, "c": ["#2a5a4a", "#6b4a33", "#7affd4"],
-   "hp": 60, "speed": 2.2, "dmg": 6, "behavior": "passive", "aggro": 0, "xp": 6, "tame": "tame_lure",
-   "drops": [["raw_meat", 1, 3], ["biomass", 1, 2]], "call": "call_low"},
-  {"id": "skitter", "name": "Skitter", "plan": "crawler", "size": 0.7, "c": ["#b8612f", "#3a2418", "#ffcf4a"],
-   "hp": 22, "speed": 4.8, "dmg": 5, "behavior": "territorial", "aggro": 7, "xp": 4,
-   "drops": [["raw_meat", 1, 1], ["spire_fiber", 0, 2]], "call": "call_high"},
-  {"id": "glider", "name": "Veil Glider", "plan": "flyer", "size": 1.2, "c": ["#5a1f8c", "#2fa794", "#ff7af0"],
-   "hp": 30, "speed": 3.0, "dmg": 0, "behavior": "passive", "aggro": 0, "xp": 5, "fly": true,
-   "drops": [["biomass", 1, 3], ["lumen_shard", 0, 1]], "call": "call_high"},
-  {"id": "stalker", "name": "Umbral Stalker", "plan": "quad", "size": 1.25, "c": ["#15101f", "#3a1f5a", "#ff3ad0"], "lanky": true,
-   "hp": 85, "speed": 5.4, "dmg": 13, "behavior": "hostile", "aggro": 22, "xp": 18, "night": true,
-   "drops": [["raw_meat", 1, 2], ["void_shard", 0, 1], ["lumen_shard", 1, 2]], "call": "growl"},
-  {"id": "frostmaw", "name": "Frostmaw", "plan": "quad", "size": 1.6, "c": ["#c9e3f2", "#4f86a8", "#9ff3ff"],
-   "hp": 140, "speed": 3.6, "dmg": 18, "behavior": "territorial", "aggro": 12, "xp": 25,
-   "drops": [["raw_meat", 2, 4], ["ice_shard", 2, 5]], "call": "growl"},
-  {"id": "magmite", "name": "Magmite", "plan": "hopper", "size": 0.9, "c": ["#3a0c06", "#ff6a1f", "#ffe48a"],
-   "hp": 45, "speed": 4.0, "dmg": 10, "behavior": "hostile", "aggro": 14, "xp": 12,
-   "drops": [["ember_shard", 1, 2]], "call": "call_high", "fire": true},
-  {"id": "dunewyrm", "name": "Dune Wyrm", "plan": "serpent", "size": 1.4, "c": ["#c98a3a", "#6e341d", "#ffcf4a"],
-   "hp": 220, "speed": 5.0, "dmg": 22, "behavior": "hostile", "aggro": 20, "xp": 45,
-   "drops": [["raw_meat", 3, 6], ["aurium_chunk", 2, 5], ["artifact", 0, 1]], "call": "growl"},
-  {"id": "voidray", "name": "Void Ray", "plan": "flyer", "size": 1.6, "c": ["#0a0220", "#5a1d9e", "#c48aff"],
-   "hp": 90, "speed": 5.5, "dmg": 15, "behavior": "hostile", "aggro": 24, "xp": 30, "fly": true,
-   "drops": [["void_shard", 1, 3], ["stardust", 1, 2]], "call": "call_high"},
-  {"id": "sentinel", "name": "Precursor Sentinel", "plan": "drone", "size": 1.0, "c": ["#3b4358", "#ffcf4a", "#4fe3ff"],
-   "hp": 70, "speed": 3.5, "dmg": 9, "behavior": "hostile", "aggro": 20, "xp": 22, "fly": true, "ranged": true,
-   "drops": [["circuit", 1, 3], ["data_core", 0, 1], ["alloy_plate", 0, 1]], "call": "call_high"},
-  {"id": "void_guardian", "name": "The Void Guardian", "plan": "boss", "size": 3.2, "c": ["#1a0533", "#a65cff", "#ffffff"],
-   "hp": 1600, "speed": 3.0, "dmg": 20, "behavior": "hostile", "aggro": 60, "xp": 500, "fly": true, "ranged": true, "boss": true,
-   "drops": [["boss_core", 1, 1], ["quantum_chip", 3, 5], ["void_shard", 8, 12]], "call": "growl"}
+ {
+  "id": "mossback",
+  "name": "Mossback",
+  "plan": "quad",
+  "size": 1.35,
+  "c": [
+   "#2a5a4a",
+   "#6b4a33",
+   "#7affd4"
+  ],
+  "hp": 60,
+  "speed": 2.2,
+  "dmg": 6,
+  "behavior": "passive",
+  "aggro": 0,
+  "xp": 6,
+  "tame": "tame_lure",
+  "drops": [
+   [
+    "raw_meat",
+    1,
+    3
+   ],
+   [
+    "biomass",
+    1,
+    2
+   ]
+  ],
+  "call": "call_low",
+  "rare": [
+   [
+    "moss_pearl",
+    0.12
+   ],
+   [
+    "stellar_shard",
+    0.004
+   ]
+  ]
+ },
+ {
+  "id": "skitter",
+  "name": "Skitter",
+  "plan": "crawler",
+  "size": 0.7,
+  "c": [
+   "#b8612f",
+   "#3a2418",
+   "#ffcf4a"
+  ],
+  "hp": 22,
+  "speed": 4.8,
+  "dmg": 5,
+  "behavior": "territorial",
+  "aggro": 7,
+  "xp": 4,
+  "drops": [
+   [
+    "raw_meat",
+    1,
+    1
+   ],
+   [
+    "spire_fiber",
+    0,
+    2
+   ]
+  ],
+  "call": "call_high",
+  "rare": [
+   [
+    "skitter_carapace",
+    0.15
+   ],
+   [
+    "stellar_shard",
+    0.003
+   ]
+  ]
+ },
+ {
+  "id": "glider",
+  "name": "Veil Glider",
+  "plan": "flyer",
+  "size": 1.2,
+  "c": [
+   "#5a1f8c",
+   "#2fa794",
+   "#ff7af0"
+  ],
+  "hp": 30,
+  "speed": 3.0,
+  "dmg": 0,
+  "behavior": "passive",
+  "aggro": 0,
+  "xp": 5,
+  "fly": true,
+  "drops": [
+   [
+    "biomass",
+    1,
+    3
+   ],
+   [
+    "lumen_shard",
+    0,
+    1
+   ]
+  ],
+  "call": "call_high",
+  "rare": [
+   [
+    "prism_heart",
+    0.08
+   ],
+   [
+    "stellar_shard",
+    0.005
+   ]
+  ]
+ },
+ {
+  "id": "stalker",
+  "name": "Umbral Stalker",
+  "plan": "quad",
+  "size": 1.25,
+  "c": [
+   "#15101f",
+   "#3a1f5a",
+   "#ff3ad0"
+  ],
+  "lanky": true,
+  "hp": 85,
+  "speed": 5.4,
+  "dmg": 13,
+  "behavior": "hostile",
+  "aggro": 22,
+  "xp": 18,
+  "night": true,
+  "drops": [
+   [
+    "raw_meat",
+    1,
+    2
+   ],
+   [
+    "void_shard",
+    0,
+    1
+   ],
+   [
+    "lumen_shard",
+    1,
+    2
+   ]
+  ],
+  "call": "growl",
+  "rare": [
+   [
+    "stalker_fang",
+    0.06
+   ],
+   [
+    "stellar_shard",
+    0.012
+   ]
+  ]
+ },
+ {
+  "id": "frostmaw",
+  "name": "Frostmaw",
+  "plan": "quad",
+  "size": 1.6,
+  "c": [
+   "#c9e3f2",
+   "#4f86a8",
+   "#9ff3ff"
+  ],
+  "hp": 140,
+  "speed": 3.6,
+  "dmg": 18,
+  "behavior": "territorial",
+  "aggro": 12,
+  "xp": 25,
+  "drops": [
+   [
+    "raw_meat",
+    2,
+    4
+   ],
+   [
+    "ice_shard",
+    2,
+    5
+   ]
+  ],
+  "call": "growl",
+  "rare": [
+   [
+    "frost_core",
+    0.07
+   ],
+   [
+    "stellar_shard",
+    0.015
+   ]
+  ]
+ },
+ {
+  "id": "magmite",
+  "name": "Magmite",
+  "plan": "hopper",
+  "size": 0.9,
+  "c": [
+   "#3a0c06",
+   "#ff6a1f",
+   "#ffe48a"
+  ],
+  "hp": 45,
+  "speed": 4.0,
+  "dmg": 10,
+  "behavior": "hostile",
+  "aggro": 14,
+  "xp": 12,
+  "drops": [
+   [
+    "ember_shard",
+    1,
+    2
+   ]
+  ],
+  "call": "call_high",
+  "fire": true,
+  "rare": [
+   [
+    "magma_pearl",
+    0.09
+   ],
+   [
+    "stellar_shard",
+    0.01
+   ]
+  ]
+ },
+ {
+  "id": "dunewyrm",
+  "name": "Dune Wyrm",
+  "plan": "serpent",
+  "size": 1.4,
+  "c": [
+   "#c98a3a",
+   "#6e341d",
+   "#ffcf4a"
+  ],
+  "hp": 220,
+  "speed": 5.0,
+  "dmg": 22,
+  "behavior": "hostile",
+  "aggro": 20,
+  "xp": 45,
+  "drops": [
+   [
+    "raw_meat",
+    3,
+    6
+   ],
+   [
+    "aurium_chunk",
+    2,
+    5
+   ],
+   [
+    "artifact",
+    0,
+    1
+   ]
+  ],
+  "call": "growl",
+  "rare": [
+   [
+    "wyrm_scale",
+    0.25
+   ],
+   [
+    "stellar_shard",
+    0.04
+   ]
+  ]
+ },
+ {
+  "id": "voidray",
+  "name": "Void Ray",
+  "plan": "flyer",
+  "size": 1.6,
+  "c": [
+   "#0a0220",
+   "#5a1d9e",
+   "#c48aff"
+  ],
+  "hp": 90,
+  "speed": 5.5,
+  "dmg": 15,
+  "behavior": "hostile",
+  "aggro": 24,
+  "xp": 30,
+  "fly": true,
+  "drops": [
+   [
+    "void_shard",
+    1,
+    3
+   ],
+   [
+    "stardust",
+    1,
+    2
+   ]
+  ],
+  "call": "call_high",
+  "rare": [
+   [
+    "void_lens",
+    0.08
+   ],
+   [
+    "stellar_shard",
+    0.02
+   ]
+  ]
+ },
+ {
+  "id": "sentinel",
+  "name": "Precursor Sentinel",
+  "plan": "drone",
+  "size": 1.0,
+  "c": [
+   "#3b4358",
+   "#ffcf4a",
+   "#4fe3ff"
+  ],
+  "hp": 70,
+  "speed": 3.5,
+  "dmg": 9,
+  "behavior": "hostile",
+  "aggro": 20,
+  "xp": 22,
+  "fly": true,
+  "ranged": true,
+  "drops": [
+   [
+    "circuit",
+    1,
+    3
+   ],
+   [
+    "data_core",
+    0,
+    1
+   ],
+   [
+    "alloy_plate",
+    0,
+    1
+   ]
+  ],
+  "call": "call_high",
+  "rare": [
+   [
+    "sentinel_eye",
+    0.1
+   ],
+   [
+    "precursor_relic",
+    0.01
+   ],
+   [
+    "stellar_shard",
+    0.015
+   ]
+  ]
+ },
+ {
+  "id": "void_guardian",
+  "name": "The Void Guardian",
+  "plan": "boss",
+  "size": 3.2,
+  "c": [
+   "#1a0533",
+   "#a65cff",
+   "#ffffff"
+  ],
+  "hp": 1600,
+  "speed": 3.0,
+  "dmg": 20,
+  "behavior": "hostile",
+  "aggro": 60,
+  "xp": 500,
+  "fly": true,
+  "ranged": true,
+  "boss": true,
+  "drops": [
+   [
+    "boss_core",
+    1,
+    1
+   ],
+   [
+    "quantum_chip",
+    3,
+    5
+   ],
+   [
+    "void_shard",
+    8,
+    12
+   ]
+  ],
+  "call": "growl",
+  "rare": [
+   [
+    "void_crown",
+    1.0
+   ],
+   [
+    "stellar_shard",
+    1.0
+   ]
+  ]
+ },
+ {
+  "id": "hive_drone",
+  "name": "Hive Drone",
+  "plan": "crawler",
+  "size": 0.55,
+  "c": [
+   "#4a1a36",
+   "#ff4ab0",
+   "#ffd0f0"
+  ],
+  "hp": 14,
+  "speed": 5.5,
+  "dmg": 4,
+  "behavior": "hostile",
+  "aggro": 18,
+  "xp": 3,
+  "drops": [
+   [
+    "biomass",
+    0,
+    1
+   ]
+  ],
+  "rare": [
+   [
+    "skitter_carapace",
+    0.08
+   ],
+   [
+    "stellar_shard",
+    0.002
+   ]
+  ],
+  "call": "call_high"
+ }
 ]

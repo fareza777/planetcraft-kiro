@@ -18,6 +18,10 @@ var _meteor_t := 0.0
 var _meteors: Array = []
 var _meteor_mesh: BoxMesh
 var base_gravity := 9.0
+var creatures: Creatures
+var trial := {}
+var starfall := {}
+var banner := ""
 
 
 func setup(w: VoxelWorld, s: SkyController, f: Fx, sf: Sfx, p: Player, pl: Dictionary, evo: Evolution) -> void:
@@ -35,6 +39,102 @@ func setup(w: VoxelWorld, s: SkyController, f: Fx, sf: Sfx, p: Player, pl: Dicti
 	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	m.albedo_color = Color(1.6, 0.8, 0.35)
 	_meteor_mesh.material = m
+
+
+# ---------------------------------------------------------------- structure events
+
+func start_trial(core: Vector3i) -> void:
+	if not trial.is_empty():
+		return
+	trial = {"pos": Vector3(core) + Vector3(0.5, 1.0, 0.5), "wave": 0, "alive": [], "t": 0.0, "core": core}
+	announce.emit("⚠ TRIAL OF THE OBELISK — survive three waves of guardians!", Color(0.8, 0.55, 1.0))
+	sfx.play("growl", 2.0, 0.7)
+	player.shake(0.5)
+	_next_wave()
+
+
+func _next_wave() -> void:
+	trial.wave = int(trial.wave) + 1
+	trial.alive = []
+	var n: int = 1 + int(trial.wave)
+	for k in n:
+		var a := k * TAU / n + randf() * 0.5
+		var p: Vector3 = trial.pos + Vector3(cos(a) * 9.0, 5.0, sin(a) * 9.0)
+		var c := creatures.spawn("sentinel", p, false, int(trial.wave) == 3 and k == 0)
+		if c != null:
+			c.state = "chase"
+			trial.alive.append(c)
+	banner = "TRIAL · WAVE %d / 3" % int(trial.wave)
+	fx.explosion(trial.pos + Vector3(0, 6, 0), Color(0.75, 0.5, 1.0))
+
+
+func _tick_trial(dt: float) -> void:
+	if trial.is_empty():
+		return
+	trial.t = float(trial.t) + dt
+	var left := 0
+	for c in trial.alive:
+		if is_instance_valid(c) and c.alive:
+			left += 1
+	banner = "TRIAL · WAVE %d / 3 · %d guardians left" % [int(trial.wave), left]
+	if player.global_position.distance_to(trial.pos) > 48.0 or player.stats.dead():
+		announce.emit("The obelisk falls silent. Trial failed.", Color(1, 0.4, 0.4))
+		trial = {}
+		banner = ""
+		return
+	if left == 0:
+		if int(trial.wave) >= 3:
+			var core: Vector3i = trial.core
+			world.set_block(core.x, core.y + 1, core.z, Reg.block("trial_chest"))
+			announce.emit("✦ Trial complete! A Reliquary rises from the obelisk.", Color(1, 0.8, 0.3))
+			sfx.play("quest", 2.0)
+			fx.sparks(trial.pos + Vector3(0, 1, 0), Color(1, 0.8, 0.3), 40)
+			trial = {}
+			banner = ""
+		else:
+			_next_wave()
+
+
+func start_starfall(altar: Vector3i) -> bool:
+	if not starfall.is_empty():
+		return true
+	if not sky.is_night():
+		announce.emit("The altar sleeps. Return when the stars are out.", Color(0.7, 0.8, 1.0))
+		return false
+	starfall = {"pos": Vector3(altar) + Vector3(0.5, 1.0, 0.5), "t": 40.0, "next": 0.0}
+	announce.emit("✦ STARFALL — catch the falling stars around the altar!", Color(0.6, 0.9, 1.0))
+	sfx.play("warp", -4.0, 1.5)
+	return true
+
+
+func _tick_starfall(dt: float) -> void:
+	if starfall.is_empty():
+		return
+	starfall.t = float(starfall.t) - dt
+	starfall.next = float(starfall.next) - dt
+	banner = "STARFALL · %d s" % int(starfall.t)
+	if float(starfall.next) <= 0.0:
+		starfall.next = randf_range(0.6, 1.4)
+		var a := randf() * TAU
+		var target: Vector3 = starfall.pos + Vector3(cos(a), 0, sin(a)) * randf_range(2.0, 9.0)
+		var top := world.column_top(floori(target.x), floori(target.z))
+		target.y = top + 1.0
+		var mi := MeshInstance3D.new()
+		var bm := BoxMesh.new()
+		bm.size = Vector3(0.4, 0.4, 0.4)
+		var m := StandardMaterial3D.new()
+		m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		m.albedo_color = Color(0.7, 1.4, 1.8)
+		bm.material = m
+		mi.mesh = bm
+		add_child(mi)
+		var start := target + Vector3(randf_range(-6, 6), 40, randf_range(-6, 6))
+		mi.global_position = start
+		_meteors.append({"mi": mi, "from": start, "to": target, "t": 0.0, "star": true})
+	if float(starfall.t) <= 0.0:
+		starfall = {}
+		banner = ""
+		announce.emit("The starfall fades.", Color(0.7, 0.8, 1.0))
 
 
 func storm_color() -> Color:
@@ -87,6 +187,8 @@ func _process(dt: float) -> void:
 	fx.set_weather(weather if intensity > 0.2 else "clear", storm_color().lightened(0.3))
 	sfx.loop("storm", is_storm() and intensity > 0.2, -10.0 + intensity * 6.0, 1.0, dt)
 	player.gravity = base_gravity * (0.45 + 0.35 * sin(Time.get_ticks_msec() * 0.0004) if weather == "gravity_anomaly" else 1.0)
+	_tick_trial(dt)
+	_tick_starfall(dt)
 	if weather == "meteor_shower":
 		_meteor_t -= dt
 		if _meteor_t <= 0.0:
@@ -133,7 +235,15 @@ func _update_meteors(dt: float) -> void:
 		if randf() < 0.6:
 			fx.sparks(mi.global_position, Color(1.0, 0.6, 0.2), 2)
 		if m.t >= 1.0:
-			_impact(m.to)
+			if m.get("star", false):
+				fx.sparks(m.to, Color(0.6, 0.95, 1.0), 16)
+				sfx.play("break_crystal", -6.0, 1.3)
+				if creatures != null:
+					var rng := RandomNumberGenerator.new()
+					rng.randomize()
+					creatures.spawn_loot(m.to + Vector3(0, 0.5, 0), Reg.roll_loot("starfall", rng), "starfall")
+			else:
+				_impact(m.to)
 			mi.queue_free()
 		else:
 			keep.append(m)

@@ -17,6 +17,22 @@ var visited := {}
 var inv: Inventory
 var side := {}          # id -> {"progress": int}
 var side_done_count := {}
+var bestiary := {}      # creature id -> {"kills": int, "drops": {item: true}}
+
+
+func record_kill(id: String) -> void:
+	var base := id
+	if not bestiary.has(base):
+		bestiary[base] = {"kills": 0, "drops": {}}
+	bestiary[base].kills = int(bestiary[base].kills) + 1
+
+
+func record_drop(src: String, item: String) -> void:
+	if not Reg.creatures.has(src):
+		return
+	if not bestiary.has(src):
+		bestiary[src] = {"kills": 0, "drops": {}}
+	bestiary[src].drops[item] = true
 
 
 func current() -> Dictionary:
@@ -158,7 +174,7 @@ func npc_marker(npc_id: String) -> String:
 
 
 func to_data() -> Dictionary:
-	return {"index": index, "progress": progress, "visited": visited, "side": side, "side_done": side_done_count}
+	return {"index": index, "progress": progress, "visited": visited, "side": side, "side_done": side_done_count, "bestiary": bestiary}
 
 
 func from_data(d: Dictionary) -> void:
@@ -167,3 +183,4 @@ func from_data(d: Dictionary) -> void:
 	visited = d.get("visited", {})
 	side = d.get("side", {})
 	side_done_count = d.get("side_done", {})
+	bestiary = d.get("bestiary", {})

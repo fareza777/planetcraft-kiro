@@ -1,0 +1,17 @@
+{
+  "rarity": {
+    "common": {"color": "#d8dee8", "label": "COMMON"},
+    "uncommon": {"color": "#7aff8a", "label": "UNCOMMON"},
+    "rare": {"color": "#4f9dff", "label": "RARE"},
+    "epic": {"color": "#c48aff", "label": "EPIC"},
+    "legendary": {"color": "#ffb02e", "label": "LEGENDARY"}
+  },
+  "elite": {"chance": 0.07, "hp": 3.0, "dmg": 1.6, "size": 1.35, "xp": 4, "rare_mult": 4.0, "shard_chance": 0.3},
+  "tables": {
+    "ruin": {"rolls": 3, "entries": [["artifact", 1, 1, 10], ["data_core", 1, 1, 10], ["circuit", 1, 3, 14], ["lumen_shard", 2, 5, 16], ["aurium_chunk", 1, 4, 14], ["fuel_cell", 1, 1, 8], ["alloy_plate", 1, 2, 8], ["sentinel_eye", 1, 1, 3], ["precursor_relic", 1, 1, 0.8], ["stellar_shard", 1, 1, 0.8]]},
+    "salvage": {"rolls": 2, "entries": [["metal_plate", 2, 6, 20], ["circuit", 1, 2, 14], ["power_cell", 1, 2, 14], ["fuel_cell", 1, 1, 8], ["o2_canister", 1, 2, 12], ["polymer", 1, 3, 12], ["titan_ingot", 1, 2, 6], ["nav_computer", 1, 1, 0.8], ["stellar_shard", 1, 1, 0.6]]},
+    "hive": {"rolls": 3, "entries": [["biomass", 3, 8, 30], ["moss_pearl", 1, 2, 10], ["skitter_carapace", 1, 3, 10], ["prism_heart", 1, 1, 3], ["stellar_shard", 1, 1, 1.2]]},
+    "trial": {"rolls": 4, "entries": [["data_core", 1, 2, 12], ["quantum_chip", 1, 1, 4], ["alloy_plate", 2, 4, 12], ["sentinel_eye", 1, 2, 10], ["artifact", 1, 2, 10], ["precursor_relic", 1, 1, 3], ["stellar_shard", 1, 2, 5]]},
+    "starfall": {"rolls": 1, "entries": [["lumen_shard", 1, 3, 40], ["void_shard", 1, 2, 12], ["stardust", 1, 2, 20], ["prism_heart", 1, 1, 2], ["stellar_shard", 1, 1, 0.7]]}
+  }
+}

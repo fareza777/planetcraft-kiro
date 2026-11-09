@@ -77,6 +77,23 @@ func _test_generator() -> void:
 
 
 func _test_mesher() -> void:
+	print("[structures & loot]")
+	var gs := Gen.new(Reg.planets["verdania"], 31337)
+	var found := {}
+	for cz in range(-8, 8):
+		for cx in range(-8, 8):
+			var bb := gs.generate_chunk(cx, cz, {})
+			for nm in ["obelisk_core", "salvage_crate", "hive_core", "shrine_altar", "ruin_cache"]:
+				if bb.has(Reg.block(nm)):
+					found[nm] = int(found.get(nm, 0)) + 1
+	check(found.size() >= 3, "256 chunks contain several structure types %s" % str(found))
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 5
+	var rolls := 0
+	for i in 200:
+		rolls += Reg.roll_loot("trial", rng).size()
+	check(rolls == 800, "trial loot table rolls 4 items each time")
+	check(Reg.rarity("stellar_shard") == "legendary" and Reg.store.size() >= 20, "rarity and store data loaded")
 	print("[mesher]")
 	var g := Gen.new(Reg.planets["verdania"], 4242)
 	var cols := []

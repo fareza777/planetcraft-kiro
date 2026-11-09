@@ -76,6 +76,11 @@ func _menu_shots() -> void:
 	menu._show_new()
 	await get_tree().create_timer(1.0).timeout
 	get_viewport().get_texture().get_image().save_png(dir + "menu_03_new.png")
+	menu._hide_overlay()
+	Game.profile.shards = int(Game.profile.shards) + 0
+	menu._show_store()
+	await get_tree().create_timer(1.2).timeout
+	get_viewport().get_texture().get_image().save_png(dir + "menu_04_store.png")
 	print("[MENUTEST] done")
 	get_tree().quit()
 

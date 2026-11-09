@@ -702,6 +702,48 @@ func _refresh_quests() -> void:
 		v.add_child(_progress_bar(quests.goal_progress(sq, int(quests.side[sid].progress)), TF.GREEN if ready else TF.CYAN))
 		v.add_child(_reward_row(sq.get("reward", []), int(sq.get("xp", 0))))
 		_quest_box.add_child(pc)
+	# bestiary
+	_quest_box.add_child(TF.label("BESTIARY  ·  hunt elites (★) for 4× rare drop chance", 22, Color(0.77, 0.54, 1.0)))
+	var grid := GridContainer.new()
+	grid.columns = 2
+	grid.add_theme_constant_override("h_separation", 10)
+	grid.add_theme_constant_override("v_separation", 10)
+	_quest_box.add_child(grid)
+	for cid in Reg.creatures:
+		var cd: Dictionary = Reg.creatures[cid]
+		var entry: Dictionary = quests.bestiary.get(cid, {})
+		var seen := not entry.is_empty()
+		var pc := PanelContainer.new()
+		pc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		pc.add_theme_stylebox_override("panel", TF.box(Color(0.05, 0.05, 0.12, 0.92), Color.html(cd.c[2]) if seen else Color(1, 1, 1, 0.06), 12, 1, 12))
+		var v := VBoxContainer.new()
+		pc.add_child(v)
+		var hd := HBoxContainer.new()
+		v.add_child(hd)
+		var sw := ColorRect.new()
+		sw.color = Color.html(cd.c[0]) if seen else Color(0.15, 0.15, 0.2)
+		sw.custom_minimum_size = Vector2(22, 22)
+		hd.add_child(sw)
+		var nm := TF.label(cd.name if seen else "??? unknown species", 18, TF.TEXT if seen else TF.DIM)
+		nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		hd.add_child(nm)
+		if seen:
+			hd.add_child(TF.label("%d defeated" % int(entry.get("kills", 0)), 14, TF.DIM))
+			v.add_child(TF.label("%s · %d HP · %s" % [cd.behavior.capitalize(), int(cd.hp), "boss" if cd.get("boss", false) else ("flies" if cd.get("fly", false) else "ground")], 14, TF.DIM))
+		var drops := HBoxContainer.new()
+		v.add_child(drops)
+		for r in cd.get("rare", []):
+			var found: bool = entry.get("drops", {}).has(r[0])
+			var ic := TextureRect.new()
+			ic.texture = Reg.icon(r[0])
+			ic.custom_minimum_size = Vector2(30, 30)
+			ic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			ic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+			ic.modulate = Color.WHITE if found else Color(0, 0, 0, 0.7)
+			drops.add_child(ic)
+			var chance := float(r[1]) * 100.0
+			drops.add_child(TF.label(("%s %s%%" % [Reg.item_label(r[0]), str(snappedf(chance, 0.1))]) if found else "??? %s%%" % str(snappedf(chance, 0.1)), 13, Reg.rarity_color(r[0]) if found else TF.DIM))
+		grid.add_child(pc)
 	# history
 	if done_n > 0:
 		_quest_box.add_child(TF.label("COMPLETED", 18, TF.GREEN))

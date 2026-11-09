@@ -36,6 +36,9 @@ var quests: Array = []
 var npcs: Dictionary = {}
 var side_quests: Dictionary = {}
 var trades: Dictionary = {}
+var loot: Dictionary = {}
+var store: Dictionary = {}
+var store_order: Array = []
 
 var _icon_cache: Dictionary = {}
 
@@ -60,6 +63,11 @@ func _ready() -> void:
 		side_quests[s.id] = s
 	var tr = JSON.parse_string(FileAccess.get_file_as_string(DATA_DIR + "trades.json"))
 	trades = tr if tr is Dictionary else {}
+	var lt = JSON.parse_string(FileAccess.get_file_as_string(DATA_DIR + "loot.json"))
+	loot = lt if lt is Dictionary else {}
+	for s in _read_json("store.json"):
+		store[s.id] = s
+		store_order.append(s.id)
 	print("[Reg] loaded %d tiles, %d blocks, %d items, %d recipes, %d planets in %d ms" % [
 		tile_defs.size(), blocks.size(), items.size(), recipes.size(), planets.size(), Time.get_ticks_msec() - t0])
 
@@ -179,6 +187,32 @@ func item_label(id: String) -> String:
 func block_drop(id: int) -> String:
 	var d := block_def(id)
 	return d.get("drop", d.name)
+
+
+func rarity(item_id: String) -> String:
+	return items.get(item_id, {}).get("rarity", "common")
+
+
+func rarity_color(item_id: String) -> Color:
+	return Color.html(loot.get("rarity", {}).get(rarity(item_id), {}).get("color", "#d8dee8"))
+
+
+## Rolls a loot table from data/loot.json. Returns [[item_id, count], ...].
+func roll_loot(table: String, rng: RandomNumberGenerator) -> Array:
+	var t: Dictionary = loot.get("tables", {}).get(table, {})
+	var entries: Array = t.get("entries", [])
+	var total := 0.0
+	for e in entries:
+		total += float(e[3])
+	var out := []
+	for r in int(t.get("rolls", 1)):
+		var x := rng.randf() * total
+		for e in entries:
+			x -= float(e[3])
+			if x <= 0.0:
+				out.append([e[0], rng.randi_range(int(e[1]), int(e[2]))])
+				break
+	return out
 
 
 func block_color(id: int) -> Color:

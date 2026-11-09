@@ -128,7 +128,8 @@ func _build_ui() -> void:
 	if Game.has_save() and not Game.meta.is_empty():
 		_menu.add_child(_save_card())
 	_menu.add_child(_menu_button("NEW EXPEDITION", "Generate a new star system from a seed", _show_new, TF.CYAN))
-	_menu.add_child(_menu_button("SETTINGS", "Graphics, controls, audio", _show_settings, TF.AMBER))
+	_menu.add_child(_menu_button("STELLAR STORE", "%d shards · suits, lasers, rovers, ships, kits" % int(Game.profile.shards), _show_store, Color(1.0, 0.75, 0.2)))
+	_menu.add_child(_menu_button("SETTINGS", "Graphics, controls, audio", _show_settings, TF.CYAN))
 	_menu.add_child(_menu_button("ABOUT", "Credits and how this game was made", _show_about, Color(0.75, 0.5, 1.0)))
 	_menu.add_child(_menu_button("QUIT", "", func() -> void: get_tree().quit(), TF.RED))
 	_ticker = TF.label("", 17, TF.TEXT)
@@ -287,6 +288,11 @@ func _show_new() -> void:
 		d.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		h.add_child(d)
 		_overlay_body.add_child(h)
+
+
+func _show_store() -> void:
+	await _open_overlay("STELLAR STORE")
+	_overlay_body.add_child(StoreScreen.new())
 
 
 func _show_settings() -> void:

@@ -6,6 +6,8 @@ extends Node3D
 signal killed(def_id: String)
 signal tamed_creature(def_id: String)
 signal boss_defeated
+signal rare_drop(creature_id: String, item_id: String)
+signal shard_found(n: int)
 
 const NEAR := 28.0
 const MID := 60.0
@@ -68,12 +70,22 @@ func setup(w: VoxelWorld, p: Player, f: Fx, s: Sfx, sk: SkyController, pl: Dicti
 
 # ---------------------------------------------------------------- spawning
 
-func spawn(id: String, pos: Vector3, is_tamed := false) -> Creature:
+func spawn(id: String, pos: Vector3, is_tamed := false, elite := false) -> Creature:
 	if not Reg.creatures.has(id):
 		return null
+	var def: Dictionary = Reg.creatures[id]
+	if elite and not def.get("boss", false):
+		var e: Dictionary = Reg.loot.get("elite", {})
+		def = def.duplicate(true)
+		def["elite"] = true
+		def["name"] = "Elite " + def.name
+		def["size"] = float(def.get("size", 1.0)) * float(e.get("size", 1.35))
+		def["hp"] = float(def.hp) * float(e.get("hp", 3.0))
+		def["dmg"] = float(def.dmg) * float(e.get("dmg", 1.6))
+		def["xp"] = int(def.get("xp", 1)) * int(e.get("xp", 4))
 	var c := Creature.new()
 	add_child(c)
-	c.setup(Reg.creatures[id], world, self)
+	c.setup(def, world, self)
 	c.global_position = pos
 	c.tamed = is_tamed
 	c.goal = pos
@@ -130,8 +142,9 @@ func _try_spawn() -> void:
 	var def: Dictionary = Reg.creatures[pick]
 	var y := top + 1.0 + (5.0 if def.get("fly", false) else 0.0)
 	var n := 1 if def.get("behavior", "") == "hostile" else randi_range(1, 3)
+	var elite_chance := float(Reg.loot.get("elite", {}).get("chance", 0.07))
 	for k in n:
-		spawn(pick, Vector3(x + 0.5 + k * 1.2, y, z + 0.5 + k * 0.8))
+		spawn(pick, Vector3(x + 0.5 + k * 1.2, y, z + 0.5 + k * 0.8), false, randf() < elite_chance)
 
 
 func _check_boss() -> void:
@@ -375,13 +388,15 @@ func _on_died(c: Creature) -> void:
 		var n := randi_range(int(d[1]), int(d[2]))
 		if n > 0:
 			items.append([d[0], n])
+	var elite: bool = c.def.get("elite", false)
+	var mult := float(Reg.loot.get("elite", {}).get("rare_mult", 4.0)) if elite else 1.0
+	for r in c.def.get("rare", []):
+		if randf() < float(r[1]) * mult:
+			items.append([r[0], 1])
+	if elite and randf() < float(Reg.loot.get("elite", {}).get("shard_chance", 0.3)):
+		items.append(["stellar_shard", 1])
 	for i in items.size():
-		var orb := MeshInstance3D.new()
-		orb.mesh = _orb_mesh
-		orb.top_level = true
-		add_child(orb)
-		orb.global_position = c.center() + Vector3(randf_range(-0.5, 0.5), 0.3, randf_range(-0.5, 0.5))
-		_orbs.append({"mi": orb, "item": items[i], "t": 0.0, "v": Vector3(randf_range(-2, 2), 4.0, randf_range(-2, 2))})
+		_spawn_orb(c.center(), items[i], c.def.id)
 	player.xp += int(c.def.get("xp", 1))
 	if c == boss:
 		boss_done = true
@@ -391,22 +406,74 @@ func _on_died(c: Creature) -> void:
 	c.queue_free()
 
 
+func _spawn_orb(at: Vector3, item: Array, source: String) -> void:
+	var id: String = item[0]
+	var rar := Reg.rarity(id)
+	var col := Reg.rarity_color(id)
+	var orb := MeshInstance3D.new()
+	var bm := BoxMesh.new()
+	var big := rar in ["rare", "epic", "legendary"]
+	bm.size = Vector3.ONE * (0.34 if big else 0.22)
+	var m := StandardMaterial3D.new()
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.albedo_color = col * (1.6 if big else 1.2)
+	bm.material = m
+	orb.mesh = bm
+	orb.top_level = true
+	add_child(orb)
+	orb.global_position = at + Vector3(randf_range(-0.5, 0.5), 0.3, randf_range(-0.5, 0.5))
+	var beam: MeshInstance3D = null
+	if rar in ["epic", "legendary"]:
+		beam = MeshInstance3D.new()
+		var b := BoxMesh.new()
+		b.size = Vector3(0.12, 14.0, 0.12)
+		var bmat := StandardMaterial3D.new()
+		bmat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		bmat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		bmat.albedo_color = Color(col.r, col.g, col.b, 0.45)
+		b.material = bmat
+		beam.mesh = b
+		orb.add_child(beam)
+		beam.position.y = 7.0
+		sfx.play("quest", 2.0, 1.3)
+		player.shake(0.2)
+	if big:
+		var label: String = Reg.loot.get("rarity", {}).get(rar, {}).get("label", rar.to_upper())
+		player.toast.emit("★ %s DROP · %s" % [label, Reg.item_label(id)], col)
+		rare_drop.emit(source, id)
+		fx.sparks(at, col, 24)
+	_orbs.append({"mi": orb, "item": item, "t": -0.6 if big else 0.0, "v": Vector3(randf_range(-2, 2), 4.0, randf_range(-2, 2))})
+
+
+func spawn_loot(at: Vector3, items: Array, source: String) -> void:
+	for it in items:
+		_spawn_orb(at, it, source)
+
+
 func _update_orbs(dt: float) -> void:
 	var keep := []
 	var target := player.global_position + Vector3(0, 1.0, 0)
 	for o in _orbs:
 		o.t += dt
 		var mi: MeshInstance3D = o.mi
-		if o.t < 0.5:
+		if o.t < 0.0:
+			mi.global_position += Vector3(0, sin(o.t * 6.0) * dt * 0.6, 0)
+		elif o.t < 0.5:
 			o.v.y -= 9.0 * dt
 			mi.global_position += o.v * dt
 		else:
 			mi.global_position = mi.global_position.move_toward(target, dt * (6.0 + o.t * 14.0))
 		mi.rotation.y += dt * 5.0
 		if o.t > 0.5 and mi.global_position.distance_to(target) < 0.5:
-			player.inv.add(o.item[0], o.item[1])
-			player.toast.emit("+%d %s" % [o.item[1], Reg.item_label(o.item[0])], Color(1, 0.85, 0.35))
-			sfx.play("pickup", -4.0)
+			if o.item[0] == "stellar_shard":
+				Game.add_shards(int(o.item[1]))
+				shard_found.emit(int(o.item[1]))
+				player.toast.emit("✦ +%d Stellar Shard (spend in the Stellar Store)" % int(o.item[1]), Color(1, 0.75, 0.2))
+				sfx.play("craft", 0.0, 1.4)
+			else:
+				var left := player.inv.add(o.item[0], o.item[1])
+				player.toast.emit("+%d %s" % [o.item[1] - left, Reg.item_label(o.item[0])], Reg.rarity_color(o.item[0]))
+				sfx.play("pickup", -4.0)
 			mi.queue_free()
 		else:
 			keep.append(o)

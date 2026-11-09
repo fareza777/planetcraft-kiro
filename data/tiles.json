@@ -1,74 +1,857 @@
 [
-  {"name": "basalt", "pattern": "noise", "f": 0.16, "c": ["#26223a", "#302b47", "#3b3554", "#474063", "#554d74"]},
-  {"name": "regolith", "pattern": "noise", "f": 0.22, "spots": 0.06, "c": ["#43301f", "#563d29", "#694b33", "#7d5b3f", "#916d4c"]},
-  {"name": "moss_top", "pattern": "grass_top", "f": 0.2, "c": ["#145a5c", "#1a7270", "#228a82", "#2fa794", "#58d3b4"]},
-  {"name": "moss_side", "pattern": "grass_side", "base": "regolith", "c": ["#145a5c", "#1a7270", "#228a82", "#2fa794"]},
-  {"name": "dune_sand", "pattern": "strata", "f": 0.12, "c": ["#a9542a", "#bd6534", "#cf7840", "#df8d4f", "#eda866"]},
-  {"name": "dunestone", "pattern": "strata", "f": 0.1, "c": ["#6e341d", "#843f24", "#99502e", "#ac6139", "#bc7448"]},
-  {"name": "ice", "pattern": "ice", "c": ["#7fc3e2", "#9dd6ee", "#b9e6f6", "#d6f3fd", "#f4feff"]},
-  {"name": "snow", "pattern": "noise", "f": 0.25, "c": ["#c9d9ea", "#d9e6f2", "#e7f0f8", "#f3f8fc", "#ffffff"]},
-  {"name": "snow_side", "pattern": "grass_side", "base": "cryorock", "c": ["#d9e6f2", "#e7f0f8", "#f3f8fc", "#ffffff"]},
-  {"name": "cryorock", "pattern": "noise", "f": 0.17, "c": ["#2f3c55", "#394a66", "#455878", "#52678a", "#62799e"]},
-  {"name": "ash", "pattern": "noise", "f": 0.3, "spots": 0.08, "c": ["#231e1f", "#2d2627", "#383031", "#453b3b", "#564949"]},
-  {"name": "volcanic", "pattern": "noise", "f": 0.14, "c": ["#150f12", "#1f1619", "#2a1e21", "#36272a", "#463235"]},
-  {"name": "magma", "pattern": "magma", "c": ["#2a0904", "#6e1606", "#c4400b", "#ff8a1f", "#ffe48a"]},
-  {"name": "bedrock", "pattern": "noise", "f": 0.3, "c": ["#08070c", "#110f17", "#1a1722", "#24202e", "#2f2a3b"]},
-  {"name": "water", "pattern": "water", "c": ["#16588f", "#1d6dad", "#2683c7", "#3399dc", "#5cb8ee"]},
-  {"name": "ferrite_ore", "pattern": "ore", "base": "basalt", "n": 6, "c": ["#5c2c1e", "#94502f", "#cf7c52", "#f2b08a"]},
-  {"name": "cuprite_ore", "pattern": "ore", "base": "basalt", "n": 6, "c": ["#145a40", "#22936a", "#4fd197", "#b4ffd9"]},
-  {"name": "titan_ore", "pattern": "ore", "base": "cryorock", "n": 5, "c": ["#59617a", "#8d98b3", "#c9d3ea", "#ffffff"]},
-  {"name": "uranite_ore", "pattern": "ore", "base": "volcanic", "n": 5, "c": ["#2f6b0d", "#64c418", "#b2ff4a", "#efffc0"]},
-  {"name": "aurium_ore", "pattern": "ore", "base": "dunestone", "n": 5, "c": ["#7a5508", "#c99219", "#f5cd4f", "#fff4bd"]},
-  {"name": "cobalt_ore", "pattern": "ore", "base": "basalt", "n": 5, "c": ["#13246b", "#2442b8", "#4f7dff", "#c4d6ff"]},
-  {"name": "lumen_crystal", "pattern": "crystal", "c": ["#0a4a66", "#1590b8", "#3fd6f5", "#9ff3ff", "#ffffff"]},
-  {"name": "void_crystal", "pattern": "crystal", "c": ["#2e0b55", "#5a1d9e", "#8f4cf0", "#cfa6ff", "#ffffff"]},
-  {"name": "ember_crystal", "pattern": "crystal", "c": ["#5a1206", "#a8300c", "#f0661c", "#ffb35a", "#fff1c9"]},
-  {"name": "glowwood_side", "pattern": "log_side", "c": ["#1f1330", "#2c1b44", "#3a2558", "#4b316e"]},
-  {"name": "glowwood_top", "pattern": "log_top", "c": ["#1f1330", "#4a2f6e", "#6a4796", "#8c67bd"]},
-  {"name": "glowleaf", "pattern": "leaves", "c": ["#45136e", "#5d1e91", "#7a2fb3", "#9a48d6"], "glow": "#ff7af0"},
-  {"name": "spire_side", "pattern": "log_side", "c": ["#5e3010", "#7d4518", "#9c5d22", "#b8762f"]},
-  {"name": "spire_top", "pattern": "log_top", "c": ["#5e3010", "#9c5d22", "#c98a3a", "#f2b35a"]},
-  {"name": "frostwood_side", "pattern": "log_side", "c": ["#2c4a63", "#3b6080", "#4f789c", "#6a94b8"]},
-  {"name": "frostleaf", "pattern": "leaves", "c": ["#7fc7e6", "#9fdcf2", "#c2ecfa", "#e6fbff"], "glow": "#ffffff"},
-  {"name": "bluegrass", "pattern": "plant", "shape": "blades", "c": ["#1f7f99", "#33aec4", "#6fe6f7"]},
-  {"name": "glowshroom", "pattern": "plant", "shape": "shroom", "c": ["#d8c9ad", "#b02a98", "#ff64d2", "#ffe2ff"]},
-  {"name": "emberweed", "pattern": "plant", "shape": "blades", "c": ["#8f2a12", "#d65a24", "#ffad55"]},
-  {"name": "frostbloom", "pattern": "plant", "shape": "flower", "c": ["#4f86a8", "#9fe0ff", "#ffffff"]},
-  {"name": "duneflower", "pattern": "plant", "shape": "flower", "c": ["#6b5a1a", "#ff8a2a", "#ffe07a"]},
-  {"name": "crystalbud", "pattern": "plant", "shape": "crystal", "c": ["#1590b8", "#3fd6f5", "#ffffff"]},
-  {"name": "earthgrass", "pattern": "plant", "shape": "blades", "c": ["#2f7a2a", "#4fb03f", "#9be070"]},
-  {"name": "ruin_brick", "pattern": "brick", "c": ["#353244", "#413d52", "#4d4861", "#5a546f"], "mortar": "#201e29"},
-  {"name": "ruin_glyph", "pattern": "glyph", "base": "ruin_brick", "glow": "#4fe3ff"},
-  {"name": "ruin_cache", "pattern": "glyph", "base": "ruin_brick", "glow": "#ffcf4a", "frame": true},
-  {"name": "metal_plate", "pattern": "metal", "c": ["#4f5766", "#5e6777", "#6d7788", "#808b9d"]},
-  {"name": "hull", "pattern": "metal", "c": ["#30374a", "#3b4358", "#475066", "#556078"], "stripe": "#e88a1f"},
-  {"name": "glass", "pattern": "glass", "c": ["#9fe8ff"]},
-  {"name": "lamp", "pattern": "lamp", "c": ["#fff6d1", "#ffd77a", "#8a7a5a"]},
-  {"name": "machine_side", "pattern": "machine", "deco": "vent", "c": ["#3c4352", "#495163", "#566073", "#677287"], "accent": "#4fe3ff"},
-  {"name": "machine_top", "pattern": "machine", "deco": "panel", "c": ["#3c4352", "#495163", "#566073", "#677287"], "accent": "#ffb02e"},
-  {"name": "fab_front", "pattern": "machine", "deco": "screen", "c": ["#3c4352", "#495163", "#566073", "#677287"], "accent": "#4fe3ff"},
-  {"name": "smelter_front", "pattern": "machine", "deco": "furnace", "c": ["#3a3030", "#4a3c3a", "#5a4845", "#6c5852"], "accent": "#ff7a1f"},
-  {"name": "o2gen_front", "pattern": "machine", "deco": "ring", "c": ["#3c4352", "#495163", "#566073", "#677287"], "accent": "#7af0ff"},
-  {"name": "solar_top", "pattern": "solar", "c": ["#0d1a3d", "#173070", "#2a4fa8", "#6f9cff"]},
-  {"name": "battery_front", "pattern": "machine", "deco": "bars", "c": ["#3c4352", "#495163", "#566073", "#677287"], "accent": "#7aff8a"},
-  {"name": "cable", "pattern": "cable", "c": ["#22252d", "#2e323c", "#3b404c"], "accent": "#ffcc33"},
-  {"name": "crate", "pattern": "crate", "c": ["#3e4a3a", "#4f5d49", "#617058", "#76866b"], "accent": "#e8b23a"},
-  {"name": "hydro_top", "pattern": "hydro", "c": ["#2a1d14", "#3a281b", "#4b3422", "#2fa04a", "#7fe06a"]},
-  {"name": "miner_front", "pattern": "machine", "deco": "drill", "c": ["#4a4130", "#5b503b", "#6d6147", "#827456"], "accent": "#ffcc33"},
-  {"name": "conveyor_top", "pattern": "conveyor", "c": ["#1b1d22", "#2a2d35", "#3a3e49"], "accent": "#ffb02e"},
-  {"name": "refinery_front", "pattern": "machine", "deco": "screen", "c": ["#3a3346", "#463e56", "#544a66", "#64597a"], "accent": "#ff5ad0"},
-  {"name": "terra_front", "pattern": "machine", "deco": "ring", "c": ["#2c3f33", "#36503f", "#42614c", "#507559"], "accent": "#7aff8a"},
-  {"name": "heater_front", "pattern": "machine", "deco": "furnace", "c": ["#3c4352", "#495163", "#566073", "#677287"], "accent": "#ff4a2a"},
-  {"name": "medbay_front", "pattern": "machine", "deco": "cross", "c": ["#d9dee8", "#c4cad6", "#aeb5c4", "#949cae"], "accent": "#ff3a4a"},
-  {"name": "launchpad_top", "pattern": "metal", "c": ["#3b3f48", "#474b56", "#535865", "#606675"], "hazard": "#ffb02e"},
-  {"name": "beacon_front", "pattern": "machine", "deco": "ring", "c": ["#3c4352", "#495163", "#566073", "#677287"], "accent": "#ff5ad0"},
-  {"name": "soil", "pattern": "soil", "c": ["#2a1c12", "#38261a", "#473222", "#57402c"]},
-  {"name": "grass_top", "pattern": "grass_top", "f": 0.22, "c": ["#24631f", "#2f7a28", "#3b9431", "#4fae3f", "#7ccf5a"]},
-  {"name": "grass_side", "pattern": "grass_side", "base": "soil", "c": ["#24631f", "#2f7a28", "#3b9431", "#4fae3f"]},
-  {"name": "asteroid", "pattern": "noise", "f": 0.2, "spots": 0.1, "c": ["#2d2a28", "#3a3633", "#4a4541", "#5b5550", "#6e6761"]},
-  {"name": "meteorite", "pattern": "ore", "base": "asteroid", "n": 7, "c": ["#3a1a52", "#7a3ab8", "#c48aff", "#ffffff"]},
-  {"name": "alien_hive", "pattern": "hive", "c": ["#2a0f20", "#4a1a36", "#6e2a4f", "#9a3f6c"], "accent": "#ff4ab0"},
-  {"name": "station_floor", "pattern": "metal", "c": ["#2b3140", "#353c4d", "#404859", "#4c5568"], "grid": true},
-  {"name": "reactor_front", "pattern": "machine", "deco": "ring", "c": ["#2a2a3a", "#363648", "#434357", "#525268"], "accent": "#b2ff4a"},
-  {"name": "assembler_front", "pattern": "machine", "deco": "screen", "c": ["#3c4352", "#495163", "#566073", "#677287"], "accent": "#ffcc33"}
+ {
+  "name": "basalt",
+  "pattern": "noise",
+  "f": 0.16,
+  "c": [
+   "#26223a",
+   "#302b47",
+   "#3b3554",
+   "#474063",
+   "#554d74"
+  ]
+ },
+ {
+  "name": "regolith",
+  "pattern": "noise",
+  "f": 0.22,
+  "spots": 0.06,
+  "c": [
+   "#43301f",
+   "#563d29",
+   "#694b33",
+   "#7d5b3f",
+   "#916d4c"
+  ]
+ },
+ {
+  "name": "moss_top",
+  "pattern": "grass_top",
+  "f": 0.2,
+  "c": [
+   "#145a5c",
+   "#1a7270",
+   "#228a82",
+   "#2fa794",
+   "#58d3b4"
+  ]
+ },
+ {
+  "name": "moss_side",
+  "pattern": "grass_side",
+  "base": "regolith",
+  "c": [
+   "#145a5c",
+   "#1a7270",
+   "#228a82",
+   "#2fa794"
+  ]
+ },
+ {
+  "name": "dune_sand",
+  "pattern": "strata",
+  "f": 0.12,
+  "c": [
+   "#a9542a",
+   "#bd6534",
+   "#cf7840",
+   "#df8d4f",
+   "#eda866"
+  ]
+ },
+ {
+  "name": "dunestone",
+  "pattern": "strata",
+  "f": 0.1,
+  "c": [
+   "#6e341d",
+   "#843f24",
+   "#99502e",
+   "#ac6139",
+   "#bc7448"
+  ]
+ },
+ {
+  "name": "ice",
+  "pattern": "ice",
+  "c": [
+   "#7fc3e2",
+   "#9dd6ee",
+   "#b9e6f6",
+   "#d6f3fd",
+   "#f4feff"
+  ]
+ },
+ {
+  "name": "snow",
+  "pattern": "noise",
+  "f": 0.25,
+  "c": [
+   "#c9d9ea",
+   "#d9e6f2",
+   "#e7f0f8",
+   "#f3f8fc",
+   "#ffffff"
+  ]
+ },
+ {
+  "name": "snow_side",
+  "pattern": "grass_side",
+  "base": "cryorock",
+  "c": [
+   "#d9e6f2",
+   "#e7f0f8",
+   "#f3f8fc",
+   "#ffffff"
+  ]
+ },
+ {
+  "name": "cryorock",
+  "pattern": "noise",
+  "f": 0.17,
+  "c": [
+   "#2f3c55",
+   "#394a66",
+   "#455878",
+   "#52678a",
+   "#62799e"
+  ]
+ },
+ {
+  "name": "ash",
+  "pattern": "noise",
+  "f": 0.3,
+  "spots": 0.08,
+  "c": [
+   "#231e1f",
+   "#2d2627",
+   "#383031",
+   "#453b3b",
+   "#564949"
+  ]
+ },
+ {
+  "name": "volcanic",
+  "pattern": "noise",
+  "f": 0.14,
+  "c": [
+   "#150f12",
+   "#1f1619",
+   "#2a1e21",
+   "#36272a",
+   "#463235"
+  ]
+ },
+ {
+  "name": "magma",
+  "pattern": "magma",
+  "c": [
+   "#2a0904",
+   "#6e1606",
+   "#c4400b",
+   "#ff8a1f",
+   "#ffe48a"
+  ]
+ },
+ {
+  "name": "bedrock",
+  "pattern": "noise",
+  "f": 0.3,
+  "c": [
+   "#08070c",
+   "#110f17",
+   "#1a1722",
+   "#24202e",
+   "#2f2a3b"
+  ]
+ },
+ {
+  "name": "water",
+  "pattern": "water",
+  "c": [
+   "#16588f",
+   "#1d6dad",
+   "#2683c7",
+   "#3399dc",
+   "#5cb8ee"
+  ]
+ },
+ {
+  "name": "ferrite_ore",
+  "pattern": "ore",
+  "base": "basalt",
+  "n": 6,
+  "c": [
+   "#5c2c1e",
+   "#94502f",
+   "#cf7c52",
+   "#f2b08a"
+  ]
+ },
+ {
+  "name": "cuprite_ore",
+  "pattern": "ore",
+  "base": "basalt",
+  "n": 6,
+  "c": [
+   "#145a40",
+   "#22936a",
+   "#4fd197",
+   "#b4ffd9"
+  ]
+ },
+ {
+  "name": "titan_ore",
+  "pattern": "ore",
+  "base": "cryorock",
+  "n": 5,
+  "c": [
+   "#59617a",
+   "#8d98b3",
+   "#c9d3ea",
+   "#ffffff"
+  ]
+ },
+ {
+  "name": "uranite_ore",
+  "pattern": "ore",
+  "base": "volcanic",
+  "n": 5,
+  "c": [
+   "#2f6b0d",
+   "#64c418",
+   "#b2ff4a",
+   "#efffc0"
+  ]
+ },
+ {
+  "name": "aurium_ore",
+  "pattern": "ore",
+  "base": "dunestone",
+  "n": 5,
+  "c": [
+   "#7a5508",
+   "#c99219",
+   "#f5cd4f",
+   "#fff4bd"
+  ]
+ },
+ {
+  "name": "cobalt_ore",
+  "pattern": "ore",
+  "base": "basalt",
+  "n": 5,
+  "c": [
+   "#13246b",
+   "#2442b8",
+   "#4f7dff",
+   "#c4d6ff"
+  ]
+ },
+ {
+  "name": "lumen_crystal",
+  "pattern": "crystal",
+  "c": [
+   "#0a4a66",
+   "#1590b8",
+   "#3fd6f5",
+   "#9ff3ff",
+   "#ffffff"
+  ]
+ },
+ {
+  "name": "void_crystal",
+  "pattern": "crystal",
+  "c": [
+   "#2e0b55",
+   "#5a1d9e",
+   "#8f4cf0",
+   "#cfa6ff",
+   "#ffffff"
+  ]
+ },
+ {
+  "name": "ember_crystal",
+  "pattern": "crystal",
+  "c": [
+   "#5a1206",
+   "#a8300c",
+   "#f0661c",
+   "#ffb35a",
+   "#fff1c9"
+  ]
+ },
+ {
+  "name": "glowwood_side",
+  "pattern": "log_side",
+  "c": [
+   "#1f1330",
+   "#2c1b44",
+   "#3a2558",
+   "#4b316e"
+  ]
+ },
+ {
+  "name": "glowwood_top",
+  "pattern": "log_top",
+  "c": [
+   "#1f1330",
+   "#4a2f6e",
+   "#6a4796",
+   "#8c67bd"
+  ]
+ },
+ {
+  "name": "glowleaf",
+  "pattern": "leaves",
+  "c": [
+   "#45136e",
+   "#5d1e91",
+   "#7a2fb3",
+   "#9a48d6"
+  ],
+  "glow": "#ff7af0"
+ },
+ {
+  "name": "spire_side",
+  "pattern": "log_side",
+  "c": [
+   "#5e3010",
+   "#7d4518",
+   "#9c5d22",
+   "#b8762f"
+  ]
+ },
+ {
+  "name": "spire_top",
+  "pattern": "log_top",
+  "c": [
+   "#5e3010",
+   "#9c5d22",
+   "#c98a3a",
+   "#f2b35a"
+  ]
+ },
+ {
+  "name": "frostwood_side",
+  "pattern": "log_side",
+  "c": [
+   "#2c4a63",
+   "#3b6080",
+   "#4f789c",
+   "#6a94b8"
+  ]
+ },
+ {
+  "name": "frostleaf",
+  "pattern": "leaves",
+  "c": [
+   "#7fc7e6",
+   "#9fdcf2",
+   "#c2ecfa",
+   "#e6fbff"
+  ],
+  "glow": "#ffffff"
+ },
+ {
+  "name": "bluegrass",
+  "pattern": "plant",
+  "shape": "blades",
+  "c": [
+   "#1f7f99",
+   "#33aec4",
+   "#6fe6f7"
+  ]
+ },
+ {
+  "name": "glowshroom",
+  "pattern": "plant",
+  "shape": "shroom",
+  "c": [
+   "#d8c9ad",
+   "#b02a98",
+   "#ff64d2",
+   "#ffe2ff"
+  ]
+ },
+ {
+  "name": "emberweed",
+  "pattern": "plant",
+  "shape": "blades",
+  "c": [
+   "#8f2a12",
+   "#d65a24",
+   "#ffad55"
+  ]
+ },
+ {
+  "name": "frostbloom",
+  "pattern": "plant",
+  "shape": "flower",
+  "c": [
+   "#4f86a8",
+   "#9fe0ff",
+   "#ffffff"
+  ]
+ },
+ {
+  "name": "duneflower",
+  "pattern": "plant",
+  "shape": "flower",
+  "c": [
+   "#6b5a1a",
+   "#ff8a2a",
+   "#ffe07a"
+  ]
+ },
+ {
+  "name": "crystalbud",
+  "pattern": "plant",
+  "shape": "crystal",
+  "c": [
+   "#1590b8",
+   "#3fd6f5",
+   "#ffffff"
+  ]
+ },
+ {
+  "name": "earthgrass",
+  "pattern": "plant",
+  "shape": "blades",
+  "c": [
+   "#2f7a2a",
+   "#4fb03f",
+   "#9be070"
+  ]
+ },
+ {
+  "name": "ruin_brick",
+  "pattern": "brick",
+  "c": [
+   "#353244",
+   "#413d52",
+   "#4d4861",
+   "#5a546f"
+  ],
+  "mortar": "#201e29"
+ },
+ {
+  "name": "ruin_glyph",
+  "pattern": "glyph",
+  "base": "ruin_brick",
+  "glow": "#4fe3ff"
+ },
+ {
+  "name": "ruin_cache",
+  "pattern": "glyph",
+  "base": "ruin_brick",
+  "glow": "#ffcf4a",
+  "frame": true
+ },
+ {
+  "name": "metal_plate",
+  "pattern": "metal",
+  "c": [
+   "#4f5766",
+   "#5e6777",
+   "#6d7788",
+   "#808b9d"
+  ]
+ },
+ {
+  "name": "hull",
+  "pattern": "metal",
+  "c": [
+   "#30374a",
+   "#3b4358",
+   "#475066",
+   "#556078"
+  ],
+  "stripe": "#e88a1f"
+ },
+ {
+  "name": "glass",
+  "pattern": "glass",
+  "c": [
+   "#9fe8ff"
+  ]
+ },
+ {
+  "name": "lamp",
+  "pattern": "lamp",
+  "c": [
+   "#fff6d1",
+   "#ffd77a",
+   "#8a7a5a"
+  ]
+ },
+ {
+  "name": "machine_side",
+  "pattern": "machine",
+  "deco": "vent",
+  "c": [
+   "#3c4352",
+   "#495163",
+   "#566073",
+   "#677287"
+  ],
+  "accent": "#4fe3ff"
+ },
+ {
+  "name": "machine_top",
+  "pattern": "machine",
+  "deco": "panel",
+  "c": [
+   "#3c4352",
+   "#495163",
+   "#566073",
+   "#677287"
+  ],
+  "accent": "#ffb02e"
+ },
+ {
+  "name": "fab_front",
+  "pattern": "machine",
+  "deco": "screen",
+  "c": [
+   "#3c4352",
+   "#495163",
+   "#566073",
+   "#677287"
+  ],
+  "accent": "#4fe3ff"
+ },
+ {
+  "name": "smelter_front",
+  "pattern": "machine",
+  "deco": "furnace",
+  "c": [
+   "#3a3030",
+   "#4a3c3a",
+   "#5a4845",
+   "#6c5852"
+  ],
+  "accent": "#ff7a1f"
+ },
+ {
+  "name": "o2gen_front",
+  "pattern": "machine",
+  "deco": "ring",
+  "c": [
+   "#3c4352",
+   "#495163",
+   "#566073",
+   "#677287"
+  ],
+  "accent": "#7af0ff"
+ },
+ {
+  "name": "solar_top",
+  "pattern": "solar",
+  "c": [
+   "#0d1a3d",
+   "#173070",
+   "#2a4fa8",
+   "#6f9cff"
+  ]
+ },
+ {
+  "name": "battery_front",
+  "pattern": "machine",
+  "deco": "bars",
+  "c": [
+   "#3c4352",
+   "#495163",
+   "#566073",
+   "#677287"
+  ],
+  "accent": "#7aff8a"
+ },
+ {
+  "name": "cable",
+  "pattern": "cable",
+  "c": [
+   "#22252d",
+   "#2e323c",
+   "#3b404c"
+  ],
+  "accent": "#ffcc33"
+ },
+ {
+  "name": "crate",
+  "pattern": "crate",
+  "c": [
+   "#3e4a3a",
+   "#4f5d49",
+   "#617058",
+   "#76866b"
+  ],
+  "accent": "#e8b23a"
+ },
+ {
+  "name": "hydro_top",
+  "pattern": "hydro",
+  "c": [
+   "#2a1d14",
+   "#3a281b",
+   "#4b3422",
+   "#2fa04a",
+   "#7fe06a"
+  ]
+ },
+ {
+  "name": "miner_front",
+  "pattern": "machine",
+  "deco": "drill",
+  "c": [
+   "#4a4130",
+   "#5b503b",
+   "#6d6147",
+   "#827456"
+  ],
+  "accent": "#ffcc33"
+ },
+ {
+  "name": "conveyor_top",
+  "pattern": "conveyor",
+  "c": [
+   "#1b1d22",
+   "#2a2d35",
+   "#3a3e49"
+  ],
+  "accent": "#ffb02e"
+ },
+ {
+  "name": "refinery_front",
+  "pattern": "machine",
+  "deco": "screen",
+  "c": [
+   "#3a3346",
+   "#463e56",
+   "#544a66",
+   "#64597a"
+  ],
+  "accent": "#ff5ad0"
+ },
+ {
+  "name": "terra_front",
+  "pattern": "machine",
+  "deco": "ring",
+  "c": [
+   "#2c3f33",
+   "#36503f",
+   "#42614c",
+   "#507559"
+  ],
+  "accent": "#7aff8a"
+ },
+ {
+  "name": "heater_front",
+  "pattern": "machine",
+  "deco": "furnace",
+  "c": [
+   "#3c4352",
+   "#495163",
+   "#566073",
+   "#677287"
+  ],
+  "accent": "#ff4a2a"
+ },
+ {
+  "name": "medbay_front",
+  "pattern": "machine",
+  "deco": "cross",
+  "c": [
+   "#d9dee8",
+   "#c4cad6",
+   "#aeb5c4",
+   "#949cae"
+  ],
+  "accent": "#ff3a4a"
+ },
+ {
+  "name": "launchpad_top",
+  "pattern": "metal",
+  "c": [
+   "#3b3f48",
+   "#474b56",
+   "#535865",
+   "#606675"
+  ],
+  "hazard": "#ffb02e"
+ },
+ {
+  "name": "beacon_front",
+  "pattern": "machine",
+  "deco": "ring",
+  "c": [
+   "#3c4352",
+   "#495163",
+   "#566073",
+   "#677287"
+  ],
+  "accent": "#ff5ad0"
+ },
+ {
+  "name": "soil",
+  "pattern": "soil",
+  "c": [
+   "#2a1c12",
+   "#38261a",
+   "#473222",
+   "#57402c"
+  ]
+ },
+ {
+  "name": "grass_top",
+  "pattern": "grass_top",
+  "f": 0.22,
+  "c": [
+   "#24631f",
+   "#2f7a28",
+   "#3b9431",
+   "#4fae3f",
+   "#7ccf5a"
+  ]
+ },
+ {
+  "name": "grass_side",
+  "pattern": "grass_side",
+  "base": "soil",
+  "c": [
+   "#24631f",
+   "#2f7a28",
+   "#3b9431",
+   "#4fae3f"
+  ]
+ },
+ {
+  "name": "asteroid",
+  "pattern": "noise",
+  "f": 0.2,
+  "spots": 0.1,
+  "c": [
+   "#2d2a28",
+   "#3a3633",
+   "#4a4541",
+   "#5b5550",
+   "#6e6761"
+  ]
+ },
+ {
+  "name": "meteorite",
+  "pattern": "ore",
+  "base": "asteroid",
+  "n": 7,
+  "c": [
+   "#3a1a52",
+   "#7a3ab8",
+   "#c48aff",
+   "#ffffff"
+  ]
+ },
+ {
+  "name": "alien_hive",
+  "pattern": "hive",
+  "c": [
+   "#2a0f20",
+   "#4a1a36",
+   "#6e2a4f",
+   "#9a3f6c"
+  ],
+  "accent": "#ff4ab0"
+ },
+ {
+  "name": "station_floor",
+  "pattern": "metal",
+  "c": [
+   "#2b3140",
+   "#353c4d",
+   "#404859",
+   "#4c5568"
+  ],
+  "grid": true
+ },
+ {
+  "name": "reactor_front",
+  "pattern": "machine",
+  "deco": "ring",
+  "c": [
+   "#2a2a3a",
+   "#363648",
+   "#434357",
+   "#525268"
+  ],
+  "accent": "#b2ff4a"
+ },
+ {
+  "name": "assembler_front",
+  "pattern": "machine",
+  "deco": "screen",
+  "c": [
+   "#3c4352",
+   "#495163",
+   "#566073",
+   "#677287"
+  ],
+  "accent": "#ffcc33"
+ },
+ {
+  "name": "obelisk_core",
+  "pattern": "glyph",
+  "base": "ruin_brick",
+  "glow": "#c48aff",
+  "frame": true
+ },
+ {
+  "name": "salvage_crate",
+  "pattern": "crate",
+  "c": [
+   "#3b4358",
+   "#475066",
+   "#556078",
+   "#6b7790"
+  ],
+  "accent": "#ff7a1f"
+ },
+ {
+  "name": "shrine_top",
+  "pattern": "crystal",
+  "c": [
+   "#2e0b55",
+   "#5a1d9e",
+   "#4fe3ff",
+   "#c9fbff",
+   "#ffffff"
+  ]
+ },
+ {
+  "name": "shrine_side",
+  "pattern": "glyph",
+  "base": "ruin_brick",
+  "glow": "#4fe3ff",
+  "frame": true
+ },
+ {
+  "name": "hive_core",
+  "pattern": "hive",
+  "c": [
+   "#5a0f30",
+   "#8a1a50",
+   "#c42a78",
+   "#ff4ab0"
+  ],
+  "accent": "#ffe0f6"
+ },
+ {
+  "name": "trial_chest",
+  "pattern": "crate",
+  "c": [
+   "#5a3d08",
+   "#7a5508",
+   "#a97a14",
+   "#f5cd4f"
+  ],
+  "accent": "#c48aff"
+ }
 ]

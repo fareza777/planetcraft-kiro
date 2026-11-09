@@ -67,5 +67,15 @@
   {"out": "atmo_seed", "in": {"ice_shard": 8, "biomass": 4, "uranium_rod": 1}, "station": "refinery"},
   {"out": "bio_seed", "in": {"hydro_seed": 8, "biomass": 8, "frost_petal": 2, "dune_fruit": 2}, "station": "refinery"},
   {"out": "terraformer", "in": {"fusion_core": 1, "alloy_plate": 8, "quantum_chip": 1, "atmo_seed": 2}, "station": "refinery"},
-  {"out": "station_floor", "n": 8, "in": {"alloy_plate": 2, "cobalt_ingot": 1}, "station": "refinery"}
+  {"out": "station_floor", "n": 8, "in": {"alloy_plate": 2, "cobalt_ingot": 1}, "station": "refinery"},
+  {"out": "fang_blade", "in": {"stalker_fang": 3, "alloy_plate": 2, "void_shard": 1}, "station": "assembler"},
+  {"out": "prism_rifle", "in": {"prism_heart": 3, "circuit": 4, "lumen_shard": 8}, "station": "assembler"},
+  {"out": "sentinel_cannon", "in": {"sentinel_eye": 3, "alloy_plate": 3, "circuit": 2}, "station": "assembler"},
+  {"out": "magma_launcher", "in": {"magma_pearl": 4, "titan_ingot": 4, "fusion_core": 1}, "station": "refinery"},
+  {"out": "suit_frostguard", "in": {"frost_core": 2, "alloy_plate": 4, "moss_pearl": 2}, "station": "refinery"},
+  {"out": "suit_wyrmjet", "in": {"wyrm_scale": 4, "suit_jet": 1, "skitter_carapace": 4}, "station": "refinery"},
+  {"out": "medkit", "n": 3, "in": {"moss_pearl": 1, "glowshroom": 2}, "station": "fabricator"},
+  {"out": "stellar_shard", "n": 12, "in": {"void_crown": 1}, "station": "refinery"},
+  {"out": "stellar_shard", "n": 6, "in": {"precursor_relic": 1}, "station": "refinery"},
+  {"out": "stellar_shard", "n": 1, "in": {"void_lens": 2, "prism_heart": 2, "stalker_fang": 1}, "station": "refinery"}
 ]

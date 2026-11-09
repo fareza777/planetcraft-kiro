@@ -254,6 +254,18 @@ func _build_hp_bar() -> void:
 	hp_bar.position = Vector3(0, height + 0.45, 0)
 	hp_bar.visible = false
 	add_child(hp_bar)
+	if def.get("elite", false) or def.get("boss", false):
+		m.albedo_color = Color(1.0, 0.75, 0.2)
+		var tag := Label3D.new()
+		tag.text = ("★ " if def.get("elite", false) else "☠ ") + String(def.name).to_upper()
+		tag.font_size = 44
+		tag.outline_size = 10
+		tag.pixel_size = 0.007
+		tag.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		tag.modulate = Color(1.0, 0.78, 0.25)
+		tag.position = Vector3(0, height + 0.85, 0)
+		add_child(tag)
+		_glow_mat.albedo_color = Color(1.4, 1.1, 0.5)
 
 
 # ---------------------------------------------------------------- combat

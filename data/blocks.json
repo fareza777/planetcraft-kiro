@@ -1,68 +1,762 @@
 [
-  {"name": "air", "label": "Air", "kind": "air"},
-  {"name": "basalt", "label": "Basalt", "tex": {"all": "basalt"}, "hard": 1.2},
-  {"name": "regolith", "label": "Regolith", "tex": {"all": "regolith"}, "hard": 0.5},
-  {"name": "moss", "label": "Teal Moss", "tex": {"top": "moss_top", "side": "moss_side", "bottom": "regolith"}, "hard": 0.6, "drop": "regolith"},
-  {"name": "dune_sand", "label": "Dune Sand", "tex": {"all": "dune_sand"}, "hard": 0.45},
-  {"name": "dunestone", "label": "Dunestone", "tex": {"all": "dunestone"}, "hard": 1.0},
-  {"name": "ice", "label": "Ice", "tex": {"all": "ice"}, "hard": 0.7, "drop": "ice_shard"},
-  {"name": "snow", "label": "Snow", "tex": {"top": "snow", "side": "snow_side", "bottom": "cryorock"}, "hard": 0.4, "drop": "ice_shard"},
-  {"name": "cryorock", "label": "Cryorock", "tex": {"all": "cryorock"}, "hard": 1.3},
-  {"name": "ash", "label": "Ash", "tex": {"all": "ash"}, "hard": 0.5},
-  {"name": "volcanic", "label": "Volcanic Rock", "tex": {"all": "volcanic"}, "hard": 1.6},
-  {"name": "magma", "label": "Magma", "tex": {"all": "magma"}, "kind": "fluid", "emissive": true, "solid": false, "hazard": 12.0, "place": false, "drop": ""},
-  {"name": "bedrock", "label": "Core Rock", "tex": {"all": "bedrock"}, "hard": -1},
-  {"name": "water", "label": "Water", "tex": {"all": "water"}, "kind": "fluid", "solid": false, "place": false, "drop": ""},
-  {"name": "ferrite_ore", "label": "Ferrite Ore", "tex": {"all": "ferrite_ore"}, "hard": 1.6, "drop": "ferrite_chunk", "xp": 2},
-  {"name": "cuprite_ore", "label": "Cuprite Ore", "tex": {"all": "cuprite_ore"}, "hard": 1.5, "drop": "cuprite_chunk", "xp": 2},
-  {"name": "titan_ore", "label": "Titanium Ore", "tex": {"all": "titan_ore"}, "hard": 2.6, "tier": 2, "drop": "titan_chunk", "xp": 4},
-  {"name": "uranite_ore", "label": "Uranite Ore", "tex": {"all": "uranite_ore"}, "hard": 2.8, "tier": 2, "drop": "uranite_chunk", "emissive": true, "rad": 0.6, "xp": 5},
-  {"name": "aurium_ore", "label": "Aurium Ore", "tex": {"all": "aurium_ore"}, "hard": 2.2, "tier": 1, "drop": "aurium_chunk", "xp": 4},
-  {"name": "cobalt_ore", "label": "Cobalt Ore", "tex": {"all": "cobalt_ore"}, "hard": 3.0, "tier": 3, "drop": "cobalt_chunk", "xp": 6},
-  {"name": "lumen_crystal", "label": "Lumen Crystal", "tex": {"all": "lumen_crystal"}, "kind": "cutout", "hard": 1.0, "drop": "lumen_shard", "emissive": true, "xp": 3},
-  {"name": "void_crystal", "label": "Void Crystal", "tex": {"all": "void_crystal"}, "kind": "cutout", "hard": 3.5, "tier": 3, "drop": "void_shard", "emissive": true, "xp": 8},
-  {"name": "ember_crystal", "label": "Ember Crystal", "tex": {"all": "ember_crystal"}, "kind": "cutout", "hard": 2.0, "tier": 2, "drop": "ember_shard", "emissive": true, "xp": 5},
-  {"name": "glowwood", "label": "Glowwood Log", "tex": {"top": "glowwood_top", "side": "glowwood_side", "bottom": "glowwood_top"}, "hard": 0.9},
-  {"name": "glowleaf", "label": "Glowleaf", "tex": {"all": "glowleaf"}, "kind": "cutout", "hard": 0.2, "drop": "biomass", "emissive": false, "sway": true},
-  {"name": "spire", "label": "Dune Spire", "tex": {"top": "spire_top", "side": "spire_side", "bottom": "spire_top"}, "hard": 0.8, "drop": "spire_fiber"},
-  {"name": "frostwood", "label": "Frostwood Log", "tex": {"top": "glowwood_top", "side": "frostwood_side", "bottom": "glowwood_top"}, "hard": 0.9},
-  {"name": "frostleaf", "label": "Frostleaf", "tex": {"all": "frostleaf"}, "kind": "cutout", "hard": 0.2, "drop": "biomass", "sway": true},
-  {"name": "bluegrass", "label": "Bluegrass", "tex": {"all": "bluegrass"}, "kind": "plant", "solid": false, "hard": 0.05, "drop": "plant_fiber"},
-  {"name": "glowshroom", "label": "Glowshroom", "tex": {"all": "glowshroom"}, "kind": "plant", "solid": false, "hard": 0.05, "drop": "glowshroom", "emissive": true},
-  {"name": "emberweed", "label": "Emberweed", "tex": {"all": "emberweed"}, "kind": "plant", "solid": false, "hard": 0.05, "drop": "plant_fiber"},
-  {"name": "frostbloom", "label": "Frostbloom", "tex": {"all": "frostbloom"}, "kind": "plant", "solid": false, "hard": 0.05, "drop": "frost_petal"},
-  {"name": "duneflower", "label": "Dune Flower", "tex": {"all": "duneflower"}, "kind": "plant", "solid": false, "hard": 0.05, "drop": "dune_fruit"},
-  {"name": "crystalbud", "label": "Crystal Bud", "tex": {"all": "crystalbud"}, "kind": "plant", "solid": false, "hard": 0.1, "drop": "lumen_shard", "emissive": true},
-  {"name": "earthgrass", "label": "Grass Tuft", "tex": {"all": "earthgrass"}, "kind": "plant", "solid": false, "hard": 0.05, "drop": "plant_fiber"},
-  {"name": "ruin_brick", "label": "Ancient Brick", "tex": {"all": "ruin_brick"}, "hard": 2.0},
-  {"name": "ruin_glyph", "label": "Glyph Panel", "tex": {"all": "ruin_glyph"}, "hard": 2.0, "emissive": true, "drop": "ruin_brick"},
-  {"name": "ruin_cache", "label": "Ancient Cache", "tex": {"all": "ruin_cache"}, "hard": 1.5, "emissive": true, "drop": "", "loot": "ruin", "place": false},
-  {"name": "metal_plate", "label": "Metal Plating", "tex": {"all": "metal_plate"}, "hard": 1.2},
-  {"name": "hull", "label": "Hull Block", "tex": {"all": "hull"}, "hard": 2.0},
-  {"name": "glass", "label": "Reinforced Glass", "tex": {"all": "glass"}, "kind": "cutout", "hard": 0.6},
-  {"name": "lamp", "label": "Lumen Lamp", "tex": {"all": "lamp"}, "hard": 0.5, "emissive": true, "light": 9.0},
-  {"name": "fabricator", "label": "Fabricator", "tex": {"top": "machine_top", "side": "fab_front", "bottom": "machine_top"}, "hard": 1.2, "station": "fabricator"},
-  {"name": "smelter", "label": "Arc Smelter", "tex": {"top": "machine_top", "side": "smelter_front", "bottom": "machine_top"}, "hard": 1.2, "station": "smelter", "machine": "smelter", "power": -4},
-  {"name": "o2_generator", "label": "Oxygen Generator", "tex": {"top": "machine_top", "side": "o2gen_front", "bottom": "machine_top"}, "hard": 1.2, "machine": "o2", "power": -3, "range": 10},
-  {"name": "solar_panel", "label": "Solar Panel", "tex": {"top": "solar_top", "side": "machine_side", "bottom": "machine_top"}, "hard": 0.8, "machine": "solar", "power": 6},
-  {"name": "battery", "label": "Battery Bank", "tex": {"top": "machine_top", "side": "battery_front", "bottom": "machine_top"}, "hard": 1.0, "machine": "battery", "capacity": 400},
-  {"name": "cable", "label": "Power Conduit", "tex": {"all": "cable"}, "hard": 0.3, "conduit": true},
-  {"name": "crate", "label": "Storage Crate", "tex": {"all": "crate"}, "hard": 0.8, "machine": "crate", "slots": 18},
-  {"name": "hydro_tray", "label": "Hydroponic Tray", "tex": {"top": "hydro_top", "side": "machine_side", "bottom": "machine_top"}, "hard": 0.8, "machine": "hydro", "power": -1},
-  {"name": "miner_bay", "label": "Drone Miner Bay", "tex": {"top": "machine_top", "side": "miner_front", "bottom": "machine_top"}, "hard": 1.2, "machine": "miner", "power": -5},
-  {"name": "conveyor", "label": "Conveyor", "tex": {"top": "conveyor_top", "side": "cable", "bottom": "cable"}, "hard": 0.4, "conduit": false, "machine": "conveyor"},
-  {"name": "refinery", "label": "Refinery", "tex": {"top": "machine_top", "side": "refinery_front", "bottom": "machine_top"}, "hard": 1.2, "station": "refinery", "machine": "refinery", "power": -6},
-  {"name": "terraformer", "label": "Terraformer", "tex": {"top": "machine_top", "side": "terra_front", "bottom": "machine_top"}, "hard": 2.0, "machine": "terraformer", "power": -12},
-  {"name": "heater", "label": "Thermal Heater", "tex": {"top": "machine_top", "side": "heater_front", "bottom": "machine_top"}, "hard": 1.0, "machine": "heater", "power": -2, "range": 8},
-  {"name": "medbay", "label": "Med Bay", "tex": {"top": "machine_top", "side": "medbay_front", "bottom": "machine_top"}, "hard": 1.0, "machine": "medbay", "power": -2},
-  {"name": "launch_pad", "label": "Launch Pad", "tex": {"top": "launchpad_top", "side": "hull", "bottom": "hull"}, "hard": 2.0, "machine": "launchpad"},
-  {"name": "beacon", "label": "Colony Beacon", "tex": {"top": "machine_top", "side": "beacon_front", "bottom": "machine_top"}, "hard": 1.5, "machine": "beacon", "emissive": true, "light": 6.0},
-  {"name": "assembler", "label": "Assembler", "tex": {"top": "machine_top", "side": "assembler_front", "bottom": "machine_top"}, "hard": 1.2, "station": "assembler", "machine": "assembler", "power": -6},
-  {"name": "reactor", "label": "Fusion Reactor", "tex": {"top": "machine_top", "side": "reactor_front", "bottom": "machine_top"}, "hard": 2.5, "machine": "reactor", "power": 40},
-  {"name": "soil", "label": "Fertile Soil", "tex": {"all": "soil"}, "hard": 0.5},
-  {"name": "grass", "label": "Living Grass", "tex": {"top": "grass_top", "side": "grass_side", "bottom": "soil"}, "hard": 0.6, "drop": "soil"},
-  {"name": "asteroid_rock", "label": "Asteroid Rock", "tex": {"all": "asteroid"}, "hard": 1.4},
-  {"name": "meteorite", "label": "Meteorite", "tex": {"all": "meteorite"}, "hard": 2.4, "tier": 2, "drop": "stardust", "emissive": true, "xp": 6},
-  {"name": "alien_hive", "label": "Alien Hive", "tex": {"all": "alien_hive"}, "hard": 1.8, "emissive": true, "drop": "biomass", "place": false},
-  {"name": "station_floor", "label": "Station Deck", "tex": {"all": "station_floor"}, "hard": 1.5}
+ {
+  "name": "air",
+  "label": "Air",
+  "kind": "air"
+ },
+ {
+  "name": "basalt",
+  "label": "Basalt",
+  "tex": {
+   "all": "basalt"
+  },
+  "hard": 1.2
+ },
+ {
+  "name": "regolith",
+  "label": "Regolith",
+  "tex": {
+   "all": "regolith"
+  },
+  "hard": 0.5
+ },
+ {
+  "name": "moss",
+  "label": "Teal Moss",
+  "tex": {
+   "top": "moss_top",
+   "side": "moss_side",
+   "bottom": "regolith"
+  },
+  "hard": 0.6,
+  "drop": "regolith"
+ },
+ {
+  "name": "dune_sand",
+  "label": "Dune Sand",
+  "tex": {
+   "all": "dune_sand"
+  },
+  "hard": 0.45
+ },
+ {
+  "name": "dunestone",
+  "label": "Dunestone",
+  "tex": {
+   "all": "dunestone"
+  },
+  "hard": 1.0
+ },
+ {
+  "name": "ice",
+  "label": "Ice",
+  "tex": {
+   "all": "ice"
+  },
+  "hard": 0.7,
+  "drop": "ice_shard"
+ },
+ {
+  "name": "snow",
+  "label": "Snow",
+  "tex": {
+   "top": "snow",
+   "side": "snow_side",
+   "bottom": "cryorock"
+  },
+  "hard": 0.4,
+  "drop": "ice_shard"
+ },
+ {
+  "name": "cryorock",
+  "label": "Cryorock",
+  "tex": {
+   "all": "cryorock"
+  },
+  "hard": 1.3
+ },
+ {
+  "name": "ash",
+  "label": "Ash",
+  "tex": {
+   "all": "ash"
+  },
+  "hard": 0.5
+ },
+ {
+  "name": "volcanic",
+  "label": "Volcanic Rock",
+  "tex": {
+   "all": "volcanic"
+  },
+  "hard": 1.6
+ },
+ {
+  "name": "magma",
+  "label": "Magma",
+  "tex": {
+   "all": "magma"
+  },
+  "kind": "fluid",
+  "emissive": true,
+  "solid": false,
+  "hazard": 12.0,
+  "place": false,
+  "drop": ""
+ },
+ {
+  "name": "bedrock",
+  "label": "Core Rock",
+  "tex": {
+   "all": "bedrock"
+  },
+  "hard": -1
+ },
+ {
+  "name": "water",
+  "label": "Water",
+  "tex": {
+   "all": "water"
+  },
+  "kind": "fluid",
+  "solid": false,
+  "place": false,
+  "drop": ""
+ },
+ {
+  "name": "ferrite_ore",
+  "label": "Ferrite Ore",
+  "tex": {
+   "all": "ferrite_ore"
+  },
+  "hard": 1.6,
+  "drop": "ferrite_chunk",
+  "xp": 2
+ },
+ {
+  "name": "cuprite_ore",
+  "label": "Cuprite Ore",
+  "tex": {
+   "all": "cuprite_ore"
+  },
+  "hard": 1.5,
+  "drop": "cuprite_chunk",
+  "xp": 2
+ },
+ {
+  "name": "titan_ore",
+  "label": "Titanium Ore",
+  "tex": {
+   "all": "titan_ore"
+  },
+  "hard": 2.6,
+  "tier": 2,
+  "drop": "titan_chunk",
+  "xp": 4
+ },
+ {
+  "name": "uranite_ore",
+  "label": "Uranite Ore",
+  "tex": {
+   "all": "uranite_ore"
+  },
+  "hard": 2.8,
+  "tier": 2,
+  "drop": "uranite_chunk",
+  "emissive": true,
+  "rad": 0.6,
+  "xp": 5
+ },
+ {
+  "name": "aurium_ore",
+  "label": "Aurium Ore",
+  "tex": {
+   "all": "aurium_ore"
+  },
+  "hard": 2.2,
+  "tier": 1,
+  "drop": "aurium_chunk",
+  "xp": 4
+ },
+ {
+  "name": "cobalt_ore",
+  "label": "Cobalt Ore",
+  "tex": {
+   "all": "cobalt_ore"
+  },
+  "hard": 3.0,
+  "tier": 3,
+  "drop": "cobalt_chunk",
+  "xp": 6
+ },
+ {
+  "name": "lumen_crystal",
+  "label": "Lumen Crystal",
+  "tex": {
+   "all": "lumen_crystal"
+  },
+  "kind": "cutout",
+  "hard": 1.0,
+  "drop": "lumen_shard",
+  "emissive": true,
+  "xp": 3
+ },
+ {
+  "name": "void_crystal",
+  "label": "Void Crystal",
+  "tex": {
+   "all": "void_crystal"
+  },
+  "kind": "cutout",
+  "hard": 3.5,
+  "tier": 3,
+  "drop": "void_shard",
+  "emissive": true,
+  "xp": 8
+ },
+ {
+  "name": "ember_crystal",
+  "label": "Ember Crystal",
+  "tex": {
+   "all": "ember_crystal"
+  },
+  "kind": "cutout",
+  "hard": 2.0,
+  "tier": 2,
+  "drop": "ember_shard",
+  "emissive": true,
+  "xp": 5
+ },
+ {
+  "name": "glowwood",
+  "label": "Glowwood Log",
+  "tex": {
+   "top": "glowwood_top",
+   "side": "glowwood_side",
+   "bottom": "glowwood_top"
+  },
+  "hard": 0.9
+ },
+ {
+  "name": "glowleaf",
+  "label": "Glowleaf",
+  "tex": {
+   "all": "glowleaf"
+  },
+  "kind": "cutout",
+  "hard": 0.2,
+  "drop": "biomass",
+  "emissive": false,
+  "sway": true
+ },
+ {
+  "name": "spire",
+  "label": "Dune Spire",
+  "tex": {
+   "top": "spire_top",
+   "side": "spire_side",
+   "bottom": "spire_top"
+  },
+  "hard": 0.8,
+  "drop": "spire_fiber"
+ },
+ {
+  "name": "frostwood",
+  "label": "Frostwood Log",
+  "tex": {
+   "top": "glowwood_top",
+   "side": "frostwood_side",
+   "bottom": "glowwood_top"
+  },
+  "hard": 0.9
+ },
+ {
+  "name": "frostleaf",
+  "label": "Frostleaf",
+  "tex": {
+   "all": "frostleaf"
+  },
+  "kind": "cutout",
+  "hard": 0.2,
+  "drop": "biomass",
+  "sway": true
+ },
+ {
+  "name": "bluegrass",
+  "label": "Bluegrass",
+  "tex": {
+   "all": "bluegrass"
+  },
+  "kind": "plant",
+  "solid": false,
+  "hard": 0.05,
+  "drop": "plant_fiber"
+ },
+ {
+  "name": "glowshroom",
+  "label": "Glowshroom",
+  "tex": {
+   "all": "glowshroom"
+  },
+  "kind": "plant",
+  "solid": false,
+  "hard": 0.05,
+  "drop": "glowshroom",
+  "emissive": true
+ },
+ {
+  "name": "emberweed",
+  "label": "Emberweed",
+  "tex": {
+   "all": "emberweed"
+  },
+  "kind": "plant",
+  "solid": false,
+  "hard": 0.05,
+  "drop": "plant_fiber"
+ },
+ {
+  "name": "frostbloom",
+  "label": "Frostbloom",
+  "tex": {
+   "all": "frostbloom"
+  },
+  "kind": "plant",
+  "solid": false,
+  "hard": 0.05,
+  "drop": "frost_petal"
+ },
+ {
+  "name": "duneflower",
+  "label": "Dune Flower",
+  "tex": {
+   "all": "duneflower"
+  },
+  "kind": "plant",
+  "solid": false,
+  "hard": 0.05,
+  "drop": "dune_fruit"
+ },
+ {
+  "name": "crystalbud",
+  "label": "Crystal Bud",
+  "tex": {
+   "all": "crystalbud"
+  },
+  "kind": "plant",
+  "solid": false,
+  "hard": 0.1,
+  "drop": "lumen_shard",
+  "emissive": true
+ },
+ {
+  "name": "earthgrass",
+  "label": "Grass Tuft",
+  "tex": {
+   "all": "earthgrass"
+  },
+  "kind": "plant",
+  "solid": false,
+  "hard": 0.05,
+  "drop": "plant_fiber"
+ },
+ {
+  "name": "ruin_brick",
+  "label": "Ancient Brick",
+  "tex": {
+   "all": "ruin_brick"
+  },
+  "hard": 2.0
+ },
+ {
+  "name": "ruin_glyph",
+  "label": "Glyph Panel",
+  "tex": {
+   "all": "ruin_glyph"
+  },
+  "hard": 2.0,
+  "emissive": true,
+  "drop": "ruin_brick"
+ },
+ {
+  "name": "ruin_cache",
+  "label": "Ancient Cache",
+  "tex": {
+   "all": "ruin_cache"
+  },
+  "hard": 1.5,
+  "emissive": true,
+  "drop": "",
+  "loot": "ruin",
+  "place": false
+ },
+ {
+  "name": "metal_plate",
+  "label": "Metal Plating",
+  "tex": {
+   "all": "metal_plate"
+  },
+  "hard": 1.2
+ },
+ {
+  "name": "hull",
+  "label": "Hull Block",
+  "tex": {
+   "all": "hull"
+  },
+  "hard": 2.0
+ },
+ {
+  "name": "glass",
+  "label": "Reinforced Glass",
+  "tex": {
+   "all": "glass"
+  },
+  "kind": "cutout",
+  "hard": 0.6
+ },
+ {
+  "name": "lamp",
+  "label": "Lumen Lamp",
+  "tex": {
+   "all": "lamp"
+  },
+  "hard": 0.5,
+  "emissive": true,
+  "light": 9.0
+ },
+ {
+  "name": "fabricator",
+  "label": "Fabricator",
+  "tex": {
+   "top": "machine_top",
+   "side": "fab_front",
+   "bottom": "machine_top"
+  },
+  "hard": 1.2,
+  "station": "fabricator"
+ },
+ {
+  "name": "smelter",
+  "label": "Arc Smelter",
+  "tex": {
+   "top": "machine_top",
+   "side": "smelter_front",
+   "bottom": "machine_top"
+  },
+  "hard": 1.2,
+  "station": "smelter",
+  "machine": "smelter",
+  "power": -4
+ },
+ {
+  "name": "o2_generator",
+  "label": "Oxygen Generator",
+  "tex": {
+   "top": "machine_top",
+   "side": "o2gen_front",
+   "bottom": "machine_top"
+  },
+  "hard": 1.2,
+  "machine": "o2",
+  "power": -3,
+  "range": 10
+ },
+ {
+  "name": "solar_panel",
+  "label": "Solar Panel",
+  "tex": {
+   "top": "solar_top",
+   "side": "machine_side",
+   "bottom": "machine_top"
+  },
+  "hard": 0.8,
+  "machine": "solar",
+  "power": 6
+ },
+ {
+  "name": "battery",
+  "label": "Battery Bank",
+  "tex": {
+   "top": "machine_top",
+   "side": "battery_front",
+   "bottom": "machine_top"
+  },
+  "hard": 1.0,
+  "machine": "battery",
+  "capacity": 400
+ },
+ {
+  "name": "cable",
+  "label": "Power Conduit",
+  "tex": {
+   "all": "cable"
+  },
+  "hard": 0.3,
+  "conduit": true
+ },
+ {
+  "name": "crate",
+  "label": "Storage Crate",
+  "tex": {
+   "all": "crate"
+  },
+  "hard": 0.8,
+  "machine": "crate",
+  "slots": 18
+ },
+ {
+  "name": "hydro_tray",
+  "label": "Hydroponic Tray",
+  "tex": {
+   "top": "hydro_top",
+   "side": "machine_side",
+   "bottom": "machine_top"
+  },
+  "hard": 0.8,
+  "machine": "hydro",
+  "power": -1
+ },
+ {
+  "name": "miner_bay",
+  "label": "Drone Miner Bay",
+  "tex": {
+   "top": "machine_top",
+   "side": "miner_front",
+   "bottom": "machine_top"
+  },
+  "hard": 1.2,
+  "machine": "miner",
+  "power": -5
+ },
+ {
+  "name": "conveyor",
+  "label": "Conveyor",
+  "tex": {
+   "top": "conveyor_top",
+   "side": "cable",
+   "bottom": "cable"
+  },
+  "hard": 0.4,
+  "conduit": false,
+  "machine": "conveyor"
+ },
+ {
+  "name": "refinery",
+  "label": "Refinery",
+  "tex": {
+   "top": "machine_top",
+   "side": "refinery_front",
+   "bottom": "machine_top"
+  },
+  "hard": 1.2,
+  "station": "refinery",
+  "machine": "refinery",
+  "power": -6
+ },
+ {
+  "name": "terraformer",
+  "label": "Terraformer",
+  "tex": {
+   "top": "machine_top",
+   "side": "terra_front",
+   "bottom": "machine_top"
+  },
+  "hard": 2.0,
+  "machine": "terraformer",
+  "power": -12
+ },
+ {
+  "name": "heater",
+  "label": "Thermal Heater",
+  "tex": {
+   "top": "machine_top",
+   "side": "heater_front",
+   "bottom": "machine_top"
+  },
+  "hard": 1.0,
+  "machine": "heater",
+  "power": -2,
+  "range": 8
+ },
+ {
+  "name": "medbay",
+  "label": "Med Bay",
+  "tex": {
+   "top": "machine_top",
+   "side": "medbay_front",
+   "bottom": "machine_top"
+  },
+  "hard": 1.0,
+  "machine": "medbay",
+  "power": -2
+ },
+ {
+  "name": "launch_pad",
+  "label": "Launch Pad",
+  "tex": {
+   "top": "launchpad_top",
+   "side": "hull",
+   "bottom": "hull"
+  },
+  "hard": 2.0,
+  "machine": "launchpad"
+ },
+ {
+  "name": "beacon",
+  "label": "Colony Beacon",
+  "tex": {
+   "top": "machine_top",
+   "side": "beacon_front",
+   "bottom": "machine_top"
+  },
+  "hard": 1.5,
+  "machine": "beacon",
+  "emissive": true,
+  "light": 6.0
+ },
+ {
+  "name": "assembler",
+  "label": "Assembler",
+  "tex": {
+   "top": "machine_top",
+   "side": "assembler_front",
+   "bottom": "machine_top"
+  },
+  "hard": 1.2,
+  "station": "assembler",
+  "machine": "assembler",
+  "power": -6
+ },
+ {
+  "name": "reactor",
+  "label": "Fusion Reactor",
+  "tex": {
+   "top": "machine_top",
+   "side": "reactor_front",
+   "bottom": "machine_top"
+  },
+  "hard": 2.5,
+  "machine": "reactor",
+  "power": 40
+ },
+ {
+  "name": "soil",
+  "label": "Fertile Soil",
+  "tex": {
+   "all": "soil"
+  },
+  "hard": 0.5
+ },
+ {
+  "name": "grass",
+  "label": "Living Grass",
+  "tex": {
+   "top": "grass_top",
+   "side": "grass_side",
+   "bottom": "soil"
+  },
+  "hard": 0.6,
+  "drop": "soil"
+ },
+ {
+  "name": "asteroid_rock",
+  "label": "Asteroid Rock",
+  "tex": {
+   "all": "asteroid"
+  },
+  "hard": 1.4
+ },
+ {
+  "name": "meteorite",
+  "label": "Meteorite",
+  "tex": {
+   "all": "meteorite"
+  },
+  "hard": 2.4,
+  "tier": 2,
+  "drop": "stardust",
+  "emissive": true,
+  "xp": 6
+ },
+ {
+  "name": "alien_hive",
+  "label": "Alien Hive",
+  "tex": {
+   "all": "alien_hive"
+  },
+  "hard": 1.8,
+  "emissive": true,
+  "drop": "biomass",
+  "place": false
+ },
+ {
+  "name": "station_floor",
+  "label": "Station Deck",
+  "tex": {
+   "all": "station_floor"
+  },
+  "hard": 1.5
+ },
+ {
+  "name": "obelisk_core",
+  "label": "Obelisk Core",
+  "tex": {
+   "all": "obelisk_core"
+  },
+  "hard": -1,
+  "emissive": true,
+  "drop": "",
+  "place": false,
+  "event": "trial"
+ },
+ {
+  "name": "salvage_crate",
+  "label": "Salvage Crate",
+  "tex": {
+   "all": "salvage_crate"
+  },
+  "hard": 1.0,
+  "drop": "",
+  "place": false,
+  "loot": "salvage"
+ },
+ {
+  "name": "shrine_altar",
+  "label": "Starfall Altar",
+  "tex": {
+   "top": "shrine_top",
+   "side": "shrine_side",
+   "bottom": "ruin_brick"
+  },
+  "hard": -1,
+  "emissive": true,
+  "drop": "",
+  "place": false,
+  "event": "starfall"
+ },
+ {
+  "name": "hive_core",
+  "label": "Hive Heart",
+  "tex": {
+   "all": "hive_core"
+  },
+  "hard": 2.5,
+  "emissive": true,
+  "drop": "",
+  "place": false,
+  "loot": "hive"
+ },
+ {
+  "name": "trial_chest",
+  "label": "Trial Reliquary",
+  "tex": {
+   "all": "trial_chest"
+  },
+  "hard": 0.8,
+  "emissive": true,
+  "drop": "",
+  "place": false,
+  "loot": "trial"
+ }
 ]

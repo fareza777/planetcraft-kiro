@@ -16,6 +16,7 @@ var meta: Dictionary = {}
 
 func _ready() -> void:
 	load_settings()
+	load_profile()
 	if not OS.has_feature("mobile") and not DisplayServer.is_touchscreen_available():
 		settings.touch = false
 	apply_render_scale()
@@ -55,6 +56,83 @@ func save_settings() -> void:
 
 func has_save() -> bool:
 	return FileAccess.file_exists(SAVE_DIR + "meta.dat")
+
+
+# ---------------------------------------------------------------- profile (account-wide)
+## Stellar Shards and store unlocks persist across expeditions (user://profile.dat).
+
+const PROFILE_PATH := "user://profile.dat"
+signal shards_changed(total: int)
+var profile := {"shards": 0, "lifetime": 0, "owned": {}, "equipped": {}}
+
+
+func load_profile() -> void:
+	if not FileAccess.file_exists(PROFILE_PATH):
+		return
+	var f := FileAccess.open(PROFILE_PATH, FileAccess.READ)
+	var d = f.get_var(false) if f != null else null
+	if d is Dictionary:
+		for k in d:
+			profile[k] = d[k]
+
+
+func save_profile() -> void:
+	var f := FileAccess.open(PROFILE_PATH, FileAccess.WRITE)
+	if f != null:
+		f.store_var(profile, false)
+
+
+func add_shards(n: int) -> void:
+	profile.shards = int(profile.shards) + n
+	profile.lifetime = int(profile.lifetime) + maxi(n, 0)
+	save_profile()
+	shards_changed.emit(int(profile.shards))
+
+
+func owns(id: String) -> bool:
+	return int(Reg.store.get(id, {}).get("price", 1)) == 0 or profile.owned.has(id)
+
+
+func buy(id: String) -> bool:
+	var it: Dictionary = Reg.store.get(id, {})
+	if it.is_empty() or owns(id) or int(profile.shards) < int(it.price):
+		return false
+	profile.shards = int(profile.shards) - int(it.price)
+	profile.owned[id] = true
+	if it.cat != "kit":
+		profile.equipped[it.cat] = id
+	save_profile()
+	shards_changed.emit(int(profile.shards))
+	return true
+
+
+func equip(id: String) -> void:
+	var it: Dictionary = Reg.store.get(id, {})
+	if it.is_empty() or not owns(id):
+		return
+	profile.equipped[it.cat] = id
+	save_profile()
+
+
+func equipped(cat: String) -> String:
+	return String(profile.equipped.get(cat, cat + "_default"))
+
+
+## Colours of the equipped cosmetic for a category (suit / laser / rover / ship).
+func cosmetic(cat: String) -> Array:
+	var it: Dictionary = Reg.store.get(equipped(cat), Reg.store.get(cat + "_default", {}))
+	var out := []
+	for c in it.get("colors", ["#ffffff"]):
+		out.append(Color.html(c))
+	return out
+
+
+func owned_kits() -> Array:
+	var out := []
+	for id in profile.owned:
+		if Reg.store.get(id, {}).get("cat", "") == "kit":
+			out.append(Reg.store[id])
+	return out
 
 
 func start_new(seed_value: int) -> void:
