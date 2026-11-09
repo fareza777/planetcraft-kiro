@@ -1,0 +1,7 @@
+# Normalize text to LF in the repository (Godot and CI run fine with LF).
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.webp binary
+*.apk binary
+*.tpz binary

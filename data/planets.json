@@ -1,0 +1,152 @@
+[
+  {
+    "id": "verdania", "name": "Verdania", "tier": 0, "type": "terrain",
+    "desc": "A violet-lit world of glowing forests, rust dunes and crystal barrens. Thin, unbreathable air.",
+    "gravity": 9.0, "temp": 14, "o2": 0.0, "pressure": 0.55, "rad": 0.0, "day_length": 720,
+    "orbit": 1.0, "color": "#2fa794",
+    "sky": {"top": "#1d1450", "horizon": "#c86fc9", "fog": "#7a5fa8", "sun": "#ffe2b8", "night_top": "#030210", "night_horizon": "#1d1035", "moon": "#ffb02e", "ring": true},
+    "fluid": "water", "sea_level": 34,
+    "noise": {"base": 42, "freq": 0.0035, "detail": 0.018, "mountain": 26, "biome_freq": 0.0016},
+    "caves": {"freq": 0.032, "width": 0.11, "cavern": 0.62},
+    "biomes": [
+      {"id": "glowwood", "name": "Glowwood Forest", "surface": "moss", "sub": "regolith", "stone": "basalt", "t": 0.0, "m": 0.6, "base": 0, "amp": 1.0,
+       "tree": "glowtree", "trees": 0.022, "flora": ["bluegrass", "bluegrass", "glowshroom"], "flora_density": 0.14},
+      {"id": "dunes", "name": "Ember Dunes", "surface": "dune_sand", "sub": "dune_sand", "stone": "dunestone", "t": 0.8, "m": -0.6, "base": 2, "amp": 0.55,
+       "tree": "spire", "trees": 0.006, "flora": ["duneflower", "emberweed"], "flora_density": 0.03},
+      {"id": "barrens", "name": "Crystal Barrens", "surface": "regolith", "sub": "regolith", "stone": "basalt", "t": -0.7, "m": -0.4, "base": 6, "amp": 1.5,
+       "tree": "crystal_spike", "trees": 0.01, "flora": ["crystalbud"], "flora_density": 0.04}
+    ],
+    "ores": [
+      {"block": "ferrite_ore", "min": 6, "max": 60, "veins": 10, "size": 7},
+      {"block": "cuprite_ore", "min": 6, "max": 50, "veins": 8, "size": 6},
+      {"block": "aurium_ore", "min": 3, "max": 28, "veins": 3, "size": 5},
+      {"block": "titan_ore", "min": 2, "max": 20, "veins": 2, "size": 4}
+    ],
+    "crystals": {"block": "lumen_crystal", "tries": 24},
+    "ruins": 0.035, "dungeons": 0.012,
+    "creatures": [{"id": "glider", "w": 3}, {"id": "skitter", "w": 2}, {"id": "mossback", "w": 3}, {"id": "stalker", "w": 1, "night": true}],
+    "weather": ["clear", "clear", "spore_rain", "dust_storm"]
+  },
+  {
+    "id": "kryos", "name": "Kryos", "tier": 1, "type": "terrain",
+    "desc": "A frozen moon of blue glaciers and frostwood taiga. Rich in titanium. Bring heat.",
+    "gravity": 7.5, "temp": -55, "o2": 0.1, "pressure": 0.8, "rad": 0.0, "day_length": 900,
+    "orbit": 1.6, "color": "#9dd6ee",
+    "sky": {"top": "#0f3a6b", "horizon": "#bfe8ff", "fog": "#a8cfe6", "sun": "#f2fbff", "night_top": "#01040c", "night_horizon": "#0b1e33", "moon": "#c9d3ea", "ring": false},
+    "fluid": "water", "sea_level": 30, "freeze_sea": true,
+    "noise": {"base": 44, "freq": 0.004, "detail": 0.02, "mountain": 34, "biome_freq": 0.0018},
+    "caves": {"freq": 0.03, "width": 0.1, "cavern": 0.6},
+    "biomes": [
+      {"id": "frostplains", "name": "Frost Plains", "surface": "snow", "sub": "ice", "stone": "cryorock", "t": 0.0, "m": 0.0, "base": 0, "amp": 0.6,
+       "tree": "frosttree", "trees": 0.004, "flora": ["frostbloom"], "flora_density": 0.04},
+      {"id": "taiga", "name": "Frostwood Taiga", "surface": "snow", "sub": "cryorock", "stone": "cryorock", "t": 0.6, "m": 0.6, "base": 2, "amp": 0.9,
+       "tree": "frosttree", "trees": 0.03, "flora": ["frostbloom", "frostbloom"], "flora_density": 0.08},
+      {"id": "glacier", "name": "Glacier Spires", "surface": "ice", "sub": "ice", "stone": "cryorock", "t": -0.6, "m": -0.5, "base": 10, "amp": 2.0,
+       "tree": "ice_spike", "trees": 0.012, "flora": [], "flora_density": 0.0}
+    ],
+    "ores": [
+      {"block": "titan_ore", "min": 4, "max": 60, "veins": 9, "size": 6},
+      {"block": "ferrite_ore", "min": 6, "max": 60, "veins": 6, "size": 6},
+      {"block": "cobalt_ore", "min": 2, "max": 18, "veins": 2, "size": 4}
+    ],
+    "crystals": {"block": "lumen_crystal", "tries": 16},
+    "ruins": 0.025, "dungeons": 0.015,
+    "creatures": [{"id": "frostmaw", "w": 2}, {"id": "mossback", "w": 2}, {"id": "skitter", "w": 1}],
+    "weather": ["clear", "snow", "blizzard"]
+  },
+  {
+    "id": "pyrrhos", "name": "Pyrrhos", "tier": 2, "type": "terrain",
+    "desc": "A volcanic hellscape with magma seas, ash plains and radioactive uranite seams.",
+    "gravity": 11.5, "temp": 95, "o2": 0.0, "pressure": 1.6, "rad": 0.25, "day_length": 600,
+    "orbit": 0.6, "color": "#ff7a1f",
+    "sky": {"top": "#2a0806", "horizon": "#ff6a2a", "fog": "#6a2414", "sun": "#ffd27a", "night_top": "#0a0202", "night_horizon": "#3a0c06", "moon": "#ff4a2a", "ring": false},
+    "fluid": "magma", "sea_level": 30,
+    "noise": {"base": 40, "freq": 0.0045, "detail": 0.025, "mountain": 30, "biome_freq": 0.002},
+    "caves": {"freq": 0.034, "width": 0.12, "cavern": 0.58},
+    "biomes": [
+      {"id": "ashplains", "name": "Ash Plains", "surface": "ash", "sub": "ash", "stone": "volcanic", "t": 0.0, "m": 0.0, "base": 0, "amp": 0.7,
+       "tree": "ember_spike", "trees": 0.006, "flora": ["emberweed"], "flora_density": 0.05},
+      {"id": "calderas", "name": "Calderas", "surface": "volcanic", "sub": "volcanic", "stone": "volcanic", "t": 0.7, "m": -0.6, "base": 8, "amp": 1.8,
+       "tree": "ember_spike", "trees": 0.01, "flora": [], "flora_density": 0.0}
+    ],
+    "ores": [
+      {"block": "uranite_ore", "min": 4, "max": 50, "veins": 8, "size": 5},
+      {"block": "aurium_ore", "min": 4, "max": 40, "veins": 5, "size": 5},
+      {"block": "cobalt_ore", "min": 2, "max": 24, "veins": 3, "size": 4}
+    ],
+    "crystals": {"block": "ember_crystal", "tries": 20},
+    "ruins": 0.02, "dungeons": 0.02,
+    "creatures": [{"id": "magmite", "w": 3}, {"id": "sentinel", "w": 1}],
+    "weather": ["clear", "ash_storm", "meteor_shower"]
+  },
+  {
+    "id": "aridus", "name": "Aridus", "tier": 1, "type": "terrain",
+    "desc": "Endless golden dunes, mesas and buried precursor cities. Scorching days, freezing nights.",
+    "gravity": 8.2, "temp": 48, "o2": 0.15, "pressure": 0.9, "rad": 0.1, "day_length": 800,
+    "orbit": 1.2, "color": "#eda866",
+    "sky": {"top": "#3a6fb0", "horizon": "#ffd9a0", "fog": "#e8b880", "sun": "#fffbe8", "night_top": "#02030c", "night_horizon": "#1a1430", "moon": "#c9d3ea", "ring": true},
+    "fluid": "none", "sea_level": 0,
+    "noise": {"base": 46, "freq": 0.003, "detail": 0.012, "mountain": 22, "biome_freq": 0.0015},
+    "caves": {"freq": 0.028, "width": 0.1, "cavern": 0.64},
+    "biomes": [
+      {"id": "goldsea", "name": "Golden Sea", "surface": "dune_sand", "sub": "dune_sand", "stone": "dunestone", "t": 0.0, "m": 0.0, "base": 0, "amp": 0.8,
+       "tree": "spire", "trees": 0.003, "flora": ["duneflower"], "flora_density": 0.01},
+      {"id": "mesas", "name": "Red Mesas", "surface": "dunestone", "sub": "dunestone", "stone": "dunestone", "t": 0.6, "m": -0.6, "base": 10, "amp": 1.6, "terrace": 6,
+       "tree": "spire", "trees": 0.004, "flora": ["emberweed"], "flora_density": 0.02}
+    ],
+    "ores": [
+      {"block": "aurium_ore", "min": 4, "max": 60, "veins": 9, "size": 6},
+      {"block": "cuprite_ore", "min": 6, "max": 60, "veins": 6, "size": 6},
+      {"block": "titan_ore", "min": 2, "max": 30, "veins": 3, "size": 4}
+    ],
+    "crystals": {"block": "lumen_crystal", "tries": 10},
+    "ruins": 0.09, "dungeons": 0.03,
+    "creatures": [{"id": "skitter", "w": 3}, {"id": "dunewyrm", "w": 1}, {"id": "glider", "w": 1}],
+    "weather": ["clear", "clear", "dust_storm", "meteor_shower"]
+  },
+  {
+    "id": "nullara", "name": "Nullara", "tier": 3, "type": "floating",
+    "desc": "An anomaly. Shattered islands drift in low gravity above a void sea. Something ancient waits here.",
+    "gravity": 3.5, "temp": 4, "o2": 0.0, "pressure": 0.3, "rad": 0.4, "day_length": 1000,
+    "orbit": 2.4, "color": "#a65cff",
+    "sky": {"top": "#0a0220", "horizon": "#5a1d9e", "fog": "#2a0f4a", "sun": "#e6ccff", "night_top": "#000000", "night_horizon": "#1a0533", "moon": "#4fe3ff", "ring": true},
+    "fluid": "none", "sea_level": 0,
+    "noise": {"base": 64, "freq": 0.012, "detail": 0.03, "mountain": 0, "biome_freq": 0.002},
+    "caves": {"freq": 0.04, "width": 0.08, "cavern": 0.7},
+    "biomes": [
+      {"id": "shards", "name": "Void Shards", "surface": "moss", "sub": "regolith", "stone": "basalt", "t": 0.0, "m": 0.0, "base": 0, "amp": 1.0,
+       "tree": "glowtree", "trees": 0.02, "flora": ["glowshroom", "crystalbud"], "flora_density": 0.1}
+    ],
+    "ores": [
+      {"block": "cobalt_ore", "min": 20, "max": 110, "veins": 8, "size": 5},
+      {"block": "titan_ore", "min": 20, "max": 110, "veins": 6, "size": 5}
+    ],
+    "crystals": {"block": "void_crystal", "tries": 30},
+    "ruins": 0.06, "dungeons": 0.04, "boss": "void_guardian",
+    "creatures": [{"id": "voidray", "w": 2}, {"id": "sentinel", "w": 2}, {"id": "glider", "w": 1}],
+    "weather": ["clear", "gravity_anomaly", "meteor_shower"]
+  },
+  {
+    "id": "kessler", "name": "Kessler Belt", "tier": 1, "type": "asteroids",
+    "desc": "A drifting field of asteroids and meteorites in high orbit. Ideal for a space station.",
+    "gravity": 1.6, "temp": -100, "o2": 0.0, "pressure": 0.0, "rad": 0.5, "day_length": 300,
+    "orbit": 1.9, "color": "#6e6761", "station": true,
+    "sky": {"top": "#000000", "horizon": "#05040c", "fog": "#05040c", "sun": "#ffffff", "night_top": "#000000", "night_horizon": "#000000", "moon": "#2fa794", "ring": false, "space": true},
+    "fluid": "none", "sea_level": 0,
+    "noise": {"base": 64, "freq": 0.03, "detail": 0.06, "mountain": 0, "biome_freq": 0.002},
+    "caves": {"freq": 0.05, "width": 0.0, "cavern": 1.0},
+    "biomes": [
+      {"id": "belt", "name": "Asteroid Field", "surface": "asteroid_rock", "sub": "asteroid_rock", "stone": "asteroid_rock", "t": 0.0, "m": 0.0, "base": 0, "amp": 1.0,
+       "tree": "", "trees": 0.0, "flora": [], "flora_density": 0.0}
+    ],
+    "ores": [
+      {"block": "meteorite", "min": 10, "max": 120, "veins": 6, "size": 4},
+      {"block": "titan_ore", "min": 10, "max": 120, "veins": 6, "size": 5},
+      {"block": "ice", "min": 10, "max": 120, "veins": 6, "size": 6}
+    ],
+    "crystals": {"block": "void_crystal", "tries": 4},
+    "ruins": 0.0, "dungeons": 0.0,
+    "creatures": [{"id": "sentinel", "w": 1}],
+    "weather": ["clear", "meteor_shower"]
+  }
+]

@@ -1,0 +1,40 @@
+# Godot editor / import caches
+.godot/
+.import/
+*.import
+export_credentials.cfg
+
+# Build output
+build/
+builds/
+*.apk
+*.aab
+*.idsig
+android/build/
+
+# Signing keys and secrets (never commit)
+*.keystore
+*.jks
+*.p12
+*.pem
+*.key
+.env
+.env.*
+secrets/
+
+# Local runtime output
+logs/
+*.log
+*.tmp
+test_output/
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+
+# NOTE: /.kiro is intentionally NOT ignored. It holds the steering docs,
+# specs and settings used to build this project with Kiro.
+!.kiro/

@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <defs>
+    <radialGradient id="sky" cx="50%" cy="40%" r="70%">
+      <stop offset="0" stop-color="#3a1f6b"/>
+      <stop offset="1" stop-color="#07040f"/>
+    </radialGradient>
+    <linearGradient id="planet" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#4fe3ff"/>
+      <stop offset="0.55" stop-color="#2fa093"/>
+      <stop offset="1" stop-color="#5a1f8c"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="48" fill="url(#sky)"/>
+  <circle cx="54" cy="52" r="3" fill="#fff"/><circle cx="200" cy="40" r="2" fill="#fff"/>
+  <circle cx="220" cy="120" r="2.5" fill="#cfe"/><circle cx="36" cy="150" r="2" fill="#fff"/>
+  <circle cx="128" cy="118" r="70" fill="url(#planet)"/>
+  <ellipse cx="128" cy="122" rx="112" ry="24" fill="none" stroke="#ffb02e" stroke-width="8" transform="rotate(-14 128 122)"/>
+  <g transform="translate(78 160)">
+    <polygon points="50,0 100,25 50,50 0,25" fill="#2fa093"/>
+    <polygon points="0,25 50,50 50,96 0,71" fill="#5c4030"/>
+    <polygon points="100,25 50,50 50,96 100,71" fill="#433c57"/>
+    <polygon points="50,58 58,62 58,78 50,74" fill="#4fe3ff"/>
+  </g>
+</svg>
