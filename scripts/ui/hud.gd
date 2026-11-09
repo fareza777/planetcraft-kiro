@@ -8,7 +8,7 @@ const TF := preload("res://scripts/ui/theme_factory.gd")
 
 var player: Player
 var sky: SkyController
-var info := {"planet": "", "biome": "", "fps": 0, "show_fps": true, "quest": "", "extra": ""}
+var info := {"planet": "", "biome": "", "fps": 0, "show_fps": true, "quest": "", "extra": "", "driving": false}
 var toasts: Array = []
 var damage_flash := 0.0
 var _last_hp := 100.0
@@ -101,6 +101,12 @@ func _draw() -> void:
 	if st.warning != "" and int(Time.get_ticks_msec() / 400) % 2 == 0:
 		var ww := font.get_string_size(st.warning, HORIZONTAL_ALIGNMENT_LEFT, -1, 30).x
 		_text(Vector2((size.x - ww) * 0.5, size.y * 0.3), st.warning, 30, TF.RED)
+	if info.driving:
+		var dt := "ROVER  ·  JUMP to exit  ·  drag right side to look around"
+		var dw := font.get_string_size(dt, HORIZONTAL_ALIGNMENT_LEFT, -1, 18).x
+		_text(Vector2((size.x - dw) * 0.5, size.y - 30), dt, 18, TF.AMBER)
+		_draw_toasts(size.y - 60)
+		return
 	# crosshair
 	var c := size * 0.5
 	var cc := Color(1, 1, 1, 0.85)
@@ -131,8 +137,11 @@ func _draw() -> void:
 		var lbl := Reg.item_label(sel_s.id)
 		var lw := font.get_string_size(lbl, HORIZONTAL_ALIGNMENT_LEFT, -1, 18).x
 		_text(Vector2((size.x - lw) * 0.5, hr.position.y - 18), lbl, 18, TF.TEXT)
-	# toasts
-	var ty := hr.position.y - 52
+	_draw_toasts(hr.position.y - 52)
+
+
+func _draw_toasts(start_y: float) -> void:
+	var ty := start_y
 	for t in toasts:
 		var a := clampf(t.time, 0.0, 1.0)
 		var col: Color = t.c

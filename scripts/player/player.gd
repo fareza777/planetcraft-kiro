@@ -7,6 +7,7 @@ signal block_mined(pos: Vector3i, id: int)
 signal block_placed(pos: Vector3i, id: int)
 signal toast(text: String, color: Color)
 signal died(reason: String)
+signal use_requested
 
 const HALF_W := 0.3
 const HEIGHT := 1.8
@@ -37,6 +38,13 @@ var _bob := 0.0
 var jet_active := false
 var xp := 0
 var noclip := false
+var fx: Fx
+var sfx: Sfx
+var combat: Creatures
+var _shake := 0.0
+var _recoil := 0.0
+var _step_d := 0.0
+var _dig_t := 0.0
 var snap_to_surface := true
 
 var cam: Camera3D
@@ -159,11 +167,46 @@ func _process(dt: float) -> void:
 				frozen = false
 				snap_to_surface = false
 		return
+	var was_ground := on_ground
+	var fall_v := vel.y
 	_physics(dt)
 	_update_target()
 	_update_mining(dt)
 	_update_place(dt)
 	_update_hand(dt)
+	_update_feel(dt, was_ground, fall_v)
+
+
+func shake(a: float) -> void:
+	_shake = maxf(_shake, a)
+
+
+func recoil(a: float) -> void:
+	_recoil = minf(_recoil + a, 0.3)
+
+
+func _update_feel(dt: float, was_ground: bool, fall_v: float) -> void:
+	_shake = maxf(0.0, _shake - dt * 1.8)
+	_recoil = move_toward(_recoil, 0.0, dt * 1.2)
+	var off := Vector3(randf_range(-1, 1), randf_range(-1, 1), 0) * _shake * _shake * 0.25
+	cam.position = Vector3(0, EYE, 0) + off
+	cam.rotation = Vector3(pitch + _recoil, 0, sin(Time.get_ticks_msec() * 0.03) * _shake * 0.03)
+	if sfx == null:
+		return
+	var hv := Vector2(vel.x, vel.z).length()
+	if on_ground and hv > 0.5:
+		_step_d += hv * dt
+		if _step_d > 2.1:
+			_step_d = 0.0
+			sfx.play("step", -14.0, 1.0, 0.2)
+	if not was_ground and on_ground and fall_v < -5.0:
+		sfx.play("land", -6.0)
+		if fall_v < -11.0:
+			shake(0.3)
+	if was_ground and not on_ground and vel.y > 3.0:
+		sfx.play("jump", -12.0)
+	sfx.loop("jet", jet_active, -8.0, 1.0, dt)
+	sfx.loop("laser", beam.visible, -14.0, 1.0 + mine_progress * 0.3, dt)
 
 
 func _physics(dt: float) -> void:
@@ -305,12 +348,26 @@ func _update_target() -> void:
 
 func _update_mining(dt: float) -> void:
 	beam.visible = false
-	if not ctl.mine or target.is_empty():
+	if not ctl.mine:
 		mine_progress = 0.0
 		crack.visible = false
 		return
 	var it := selected_item()
 	if it.get("type", "") == "weapon":
+		if combat != null:
+			combat.fire_weapon(it)
+		crack.visible = false
+		return
+	if combat != null:
+		var c := combat.laser_tick(dt, float(tool_stats().get("dmg", 2)))
+		if c != null:
+			_beam_to(c.center())
+			mine_progress = 0.0
+			crack.visible = false
+			return
+	if target.is_empty():
+		mine_progress = 0.0
+		crack.visible = false
 		return
 	var p: Vector3i = target.pos
 	if p != _mine_pos:
@@ -331,6 +388,13 @@ func _update_mining(dt: float) -> void:
 		return
 	stats.energy = maxf(0.0, stats.energy - 0.6 * dt)
 	mine_progress += dt * float(tool.speed) / maxf(hard, 0.05)
+	_dig_t -= dt
+	if _dig_t <= 0.0:
+		_dig_t = 0.16
+		if sfx != null:
+			sfx.play("dig", -10.0, 0.8 + 0.4 / maxf(hard, 0.3))
+		if fx != null:
+			fx.chips(Vector3(p) + Vector3(0.5, 0.5, 0.5) + Vector3(target.normal) * 0.52, Reg.block_color(id))
 	crack.visible = true
 	crack.global_position = Vector3(p) + Vector3(0.5, 0.5, 0.5)
 	_crack_mat.albedo_color = Color(0.0, 0.0, 0.0, clampf(mine_progress, 0.0, 1.0) * 0.55)
@@ -343,6 +407,11 @@ func _update_mining(dt: float) -> void:
 				if left > 0:
 					toast.emit("Inventory full", Color(1, 0.5, 0.4))
 			xp += int(Reg.block_def(id).get("xp", 0))
+			if fx != null:
+				fx.debris(p, Reg.block_color(id))
+			if sfx != null:
+				sfx.play("break_crystal" if Reg.emissive[id] == 1 and Reg.kind[id] == Reg.Kind.CUTOUT else "break", -6.0)
+			shake(0.06)
 			block_mined.emit(p, id)
 			# plants on top fall with the block
 			var above := world.get_block(p.x, p.y + 1, p.z)
@@ -366,8 +435,11 @@ func _toast_once(t: String, c: Color) -> void:
 
 
 func _show_beam(p: Vector3i) -> void:
+	_beam_to(Vector3(p) + Vector3(0.5, 0.5, 0.5))
+
+
+func _beam_to(to: Vector3) -> void:
 	var from := hand.global_position + -cam.global_transform.basis.z * 0.3
-	var to := Vector3(p) + Vector3(0.5, 0.5, 0.5)
 	var mid := (from + to) * 0.5
 	var len := from.distance_to(to)
 	beam.visible = true
@@ -385,7 +457,7 @@ func _update_place(dt: float) -> void:
 	if _place_cd > 0.0:
 		return
 	_place_cd = 0.18
-	use_selected()
+	use_requested.emit()
 
 
 ## Uses the selected hotbar item: place a block, eat/drink, or interact.
@@ -411,8 +483,17 @@ func use_selected() -> void:
 				return
 			if world.set_block(dest.x, dest.y, dest.z, bid):
 				inv.remove_at(selected, 1)
+				if sfx != null:
+					sfx.play("place", -6.0)
 				block_placed.emit(dest, bid)
 		"food", "consumable":
+			if it.get("lure", false):
+				if combat != null and combat.try_tame():
+					inv.remove_at(selected, 1)
+					toast.emit("Creature tamed! It will follow and defend you.", Color(0.5, 1, 0.6))
+				else:
+					toast.emit("Aim at a tameable creature (e.g. Mossback)", Color(1, 0.8, 0.4))
+				return
 			if stats.consume(it):
 				inv.remove_at(selected, 1)
 				toast.emit("Used " + it.label, Color(0.6, 1, 0.7))

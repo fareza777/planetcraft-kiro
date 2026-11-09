@@ -116,6 +116,28 @@ func load_mods(pid: String) -> Dictionary:
 	return d if d is Dictionary else {}
 
 
+func save_state(pid: String, st: Dictionary) -> void:
+	DirAccess.make_dir_recursive_absolute(SAVE_DIR)
+	var tmp := SAVE_DIR + pid + ".state.tmp"
+	var f := FileAccess.open(tmp, FileAccess.WRITE)
+	if f == null:
+		return
+	f.store_var(st, false)
+	f.close()
+	DirAccess.rename_absolute(tmp, SAVE_DIR + pid + ".state")
+
+
+func load_state(pid: String) -> Dictionary:
+	var path := SAVE_DIR + pid + ".state"
+	if not FileAccess.file_exists(path):
+		return {}
+	var f := FileAccess.open(path, FileAccess.READ)
+	if f == null:
+		return {}
+	var d = f.get_var(false)
+	return d if d is Dictionary else {}
+
+
 func notify_crafted(item: String, n: int) -> void:
 	crafted.emit(item, n)
 

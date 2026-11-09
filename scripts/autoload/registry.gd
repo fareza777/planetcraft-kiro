@@ -14,6 +14,7 @@ var tile_index: Dictionary = {}
 var tile_defs: Array = []
 var tile_images: Array[Image] = []
 var tile_array: Texture2DArray
+var tile_avg := PackedColorArray()
 
 var blocks: Array = []
 var block_ids: Dictionary = {}
@@ -80,6 +81,15 @@ func _load_tiles() -> void:
 		var m: Image = img.duplicate()
 		m.generate_mipmaps()
 		mipped.append(m)
+		var acc := Color(0, 0, 0, 0)
+		var cnt := 0
+		for y in range(0, 32, 2):
+			for x in range(0, 32, 2):
+				var c := img.get_pixel(x, y)
+				if c.a > 0.5:
+					acc += c
+					cnt += 1
+		tile_avg.append(acc / maxf(cnt, 1) if cnt > 0 else Color(0.5, 0.5, 0.5))
 	tile_array = Texture2DArray.new()
 	var err := tile_array.create_from_images(mipped)
 	if err != OK:
@@ -159,6 +169,11 @@ func item_label(id: String) -> String:
 func block_drop(id: int) -> String:
 	var d := block_def(id)
 	return d.get("drop", d.name)
+
+
+func block_color(id: int) -> Color:
+	var t := face_tiles[id * 6 + 2]
+	return tile_avg[t] if t < tile_avg.size() else Color.GRAY
 
 
 func icon(item_id: String) -> Texture2D:
