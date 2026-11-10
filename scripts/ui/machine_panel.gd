@@ -38,6 +38,7 @@ func _ready() -> void:
 	head.add_child(_title)
 	head.add_child(TF.button("Close", _close, 140))
 	var scroll := ScrollContainer.new()
+	TouchScroll.attach(scroll)
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	outer.add_child(scroll)

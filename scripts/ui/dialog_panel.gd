@@ -81,9 +81,12 @@ func _ready() -> void:
 	right.add_child(bubble)
 	_text = TF.label("", 20, TF.TEXT)
 	_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_FILL
+	_text.justification_flags = TextServer.JUSTIFICATION_WORD_BOUND | TextServer.JUSTIFICATION_SKIP_LAST_LINE | TextServer.JUSTIFICATION_TRIM_EDGE_SPACES
 	_text.custom_minimum_size.y = 70
 	bubble.add_child(_text)
 	var scroll := ScrollContainer.new()
+	TouchScroll.attach(scroll)
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	right.add_child(scroll)

@@ -67,17 +67,111 @@ func _ready() -> void:
 	_build_target_meshes()
 
 
+var _held_id := "?"
+var _held: Node3D
+var _swing := 0.0
+
+
 func _build_hand() -> void:
 	hand = Node3D.new()
 	hand.position = Vector3(0.32, -0.3, -0.55)
 	cam.add_child(hand)
+	_held = Node3D.new()
+	hand.add_child(_held)
+	_tool_root = Node3D.new()
+	hand.add_child(_tool_root)
+	_build_tool_model(_tool_root)
+	_build_beam()
+
+
+var _tool_root: Node3D
+
+
+## First-person model for the selected hotbar item.
+func _refresh_held() -> void:
+	var s = inv.slots[selected]
+	var id: String = s.id if s != null else ""
+	if id == _held_id:
+		return
+	_held_id = id
+	for c in _held.get_children():
+		c.queue_free()
+	var it := Reg.item(id)
+	var t: String = it.get("type", "")
+	var cols: Array = it.get("icon", {}).get("c", ["#5e6777", "#ffb02e", "#4fe3ff"])
+	var c0 := Color.html(cols[0])
+	var c1 := Color.html(cols[1 % cols.size()])
+	var c2 := Color.html(cols[2 % cols.size()])
+	_tool_root.visible = t == "" or t == "tool"
+	match t:
+		"block":
+			var mi := MeshInstance3D.new()
+			var bm := BoxMesh.new()
+			bm.size = Vector3(0.2, 0.2, 0.2)
+			mi.mesh = bm
+			var m := StandardMaterial3D.new()
+			var bid: int = it.block
+			m.albedo_texture = ImageTexture.create_from_image(Reg.tile_images[Reg.face_tiles[bid * 6 + 4]])
+			m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
+			if Reg.emissive[bid] == 1:
+				m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+			if Reg.kind[bid] == Reg.Kind.CUTOUT or Reg.kind[bid] == Reg.Kind.PLANT:
+				m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
+			mi.material_override = m
+			mi.position = Vector3(-0.02, 0.02, -0.12)
+			mi.rotation = Vector3(0.25, 0.6, 0.1)
+			_held.add_child(mi)
+		"weapon":
+			var w: Dictionary = it.weapon
+			if w.get("melee", false):
+				_held.add_child(_box(Vector3(0.05, 0.05, 0.16), c0, Vector3(0, -0.02, 0.06)))
+				_held.add_child(_box(Vector3(0.14, 0.03, 0.04), c0.lightened(0.2), Vector3(0, 0, -0.02)))
+				_held.add_child(_box(Vector3(0.03, 0.06, 0.55), c1, Vector3(0, 0.0, -0.32), true))
+				_held.add_child(_box(Vector3(0.012, 0.07, 0.56), c2, Vector3(0, 0.0, -0.32), true))
+			else:
+				var long: bool = it.icon.get("shape", "") == "rifle"
+				var L := 0.5 if long else 0.3
+				_held.add_child(_box(Vector3(0.1, 0.11, L), c0, Vector3(0, 0, -L * 0.3)))
+				_held.add_child(_box(Vector3(0.105, 0.03, L * 0.8), c0.lightened(0.25), Vector3(0, 0.065, -L * 0.3)))
+				_held.add_child(_box(Vector3(0.07, 0.15, 0.08), c0.darkened(0.35), Vector3(0, -0.12, 0.02), false, Vector3(-0.3, 0, 0)))
+				_held.add_child(_box(Vector3(0.05, 0.05, 0.16), c0.darkened(0.2), Vector3(0, 0.0, -L * 0.8)))
+				_held.add_child(_box(Vector3(0.06, 0.06, 0.03), c1, Vector3(0, 0.0, -L * 0.8 - 0.09), true))
+				_held.add_child(_box(Vector3(0.11, 0.025, 0.12), c1, Vector3(0, 0.02, -L * 0.25), true))
+				if long:
+					_held.add_child(_box(Vector3(0.05, 0.05, 0.16), Color(0.15, 0.16, 0.2), Vector3(0, 0.11, -L * 0.3)))
+					_held.add_child(_box(Vector3(0.035, 0.035, 0.01), c2, Vector3(0, 0.11, -L * 0.3 - 0.085), true))
+		"tool", "":
+			pass
+		_:
+			var sp := Sprite3D.new()
+			sp.texture = Reg.icon(id)
+			sp.pixel_size = 0.0075
+			sp.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
+			sp.shaded = false
+			sp.position = Vector3(-0.04, 0.05, -0.1)
+			sp.rotation = Vector3(0, 0.35, 0)
+			_held.add_child(sp)
+	UiAnim_hand_pop()
+
+
+func UiAnim_hand_pop() -> void:
+	hand.scale = Vector3.ONE * 0.6
+	var tw := hand.create_tween().set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.tween_property(hand, "scale", Vector3.ONE, 0.22)
+
+
+func _build_tool_model(root: Node3D) -> void:
 	var suit: Array = Game.cosmetic("suit")
-	var body := _box(Vector3(0.11, 0.11, 0.42), suit[0], Vector3.ZERO)
-	hand.add_child(body)
-	hand.add_child(_box(Vector3(0.13, 0.05, 0.2), suit[1], Vector3(0, 0.07, 0.05)))
-	hand.add_child(_box(Vector3(0.06, 0.06, 0.1), suit[2], Vector3(0, 0.0, -0.25), true))
-	hand.add_child(_box(Vector3(0.115, 0.02, 0.3), suit[2], Vector3(0, -0.058, -0.02), true))
-	hand.add_child(_box(Vector3(0.08, 0.16, 0.08), Color("2a2f3c"), Vector3(0, -0.11, 0.12)))
+	root.add_child(_box(Vector3(0.11, 0.11, 0.42), suit[0], Vector3.ZERO))
+	root.add_child(_box(Vector3(0.13, 0.05, 0.2), suit[1], Vector3(0, 0.07, 0.05)))
+	root.add_child(_box(Vector3(0.06, 0.06, 0.1), suit[2], Vector3(0, 0.0, -0.25), true))
+	root.add_child(_box(Vector3(0.115, 0.02, 0.3), suit[2], Vector3(0, -0.058, -0.02), true))
+	root.add_child(_box(Vector3(0.08, 0.16, 0.08), Color("2a2f3c"), Vector3(0, -0.11, 0.12)))
+	for k in 3:
+		root.add_child(_box(Vector3(0.02, 0.02, 0.06), suit[1].darkened(0.3), Vector3(0.0, 0.0, -0.33 - k * 0.0) + Vector3(cos(k * 2.1) * 0.035, sin(k * 2.1) * 0.035, 0)))
+
+
+func _build_beam() -> void:
 	beam = MeshInstance3D.new()
 	var bm := BoxMesh.new()
 	bm.size = Vector3(0.03, 0.03, 1.0)
@@ -90,7 +184,7 @@ func _build_hand() -> void:
 	add_child(beam)
 
 
-func _box(size: Vector3, color: Color, pos: Vector3, glow := false) -> MeshInstance3D:
+func _box(size: Vector3, color: Color, pos: Vector3, glow := false, rot := Vector3.ZERO) -> MeshInstance3D:
 	var mi := MeshInstance3D.new()
 	var m := BoxMesh.new()
 	m.size = size
@@ -102,6 +196,7 @@ func _box(size: Vector3, color: Color, pos: Vector3, glow := false) -> MeshInsta
 		mat.albedo_color = color * 1.4
 	mi.material_override = mat
 	mi.position = pos
+	mi.rotation = rot
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	return mi
 
@@ -207,7 +302,7 @@ func _update_feel(dt: float, was_ground: bool, fall_v: float) -> void:
 			shake(0.3)
 	if was_ground and not on_ground and vel.y > 3.0:
 		sfx.play("jump", -12.0)
-	sfx.loop("jet", jet_active, -8.0, 1.0, dt)
+	sfx.loop("jet", jet_active, -12.0, 1.0, dt)
 	sfx.loop("laser", beam.visible, -14.0, 1.0 + mine_progress * 0.3, dt)
 
 
@@ -394,7 +489,7 @@ func _update_mining(dt: float) -> void:
 	if _dig_t <= 0.0:
 		_dig_t = 0.16
 		if sfx != null:
-			sfx.play("dig", -10.0, 0.8 + 0.4 / maxf(hard, 0.3))
+			sfx.play("dig", -12.0, 0.8 + 0.4 / maxf(hard, 0.3))
 		if fx != null:
 			fx.chips(Vector3(p) + Vector3(0.5, 0.5, 0.5) + Vector3(target.normal) * 0.52, Reg.block_color(id))
 	crack.visible = true
@@ -506,7 +601,14 @@ func _overlaps_player(b: Vector3i) -> bool:
 	return b.x + 1 > p.x - HALF_W and b.x < p.x + HALF_W and b.z + 1 > p.z - HALF_W and b.z < p.z + HALF_W and b.y + 1 > p.y and b.y < p.y + HEIGHT
 
 
+func swing() -> void:
+	_swing = 1.0
+
+
 func _update_hand(dt: float) -> void:
+	_refresh_held()
+	_swing = maxf(0.0, _swing - dt * 4.0)
+	hand.rotation = Vector3(-sin(_swing * PI) * 0.9, sin(_swing * PI) * 0.5, 0)
 	var moving: bool = Vector2(vel.x, vel.z).length() > 0.5 and on_ground
 	if moving:
 		_bob += dt * 9.0

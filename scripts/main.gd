@@ -12,6 +12,14 @@ func _ready() -> void:
 	music = Music.new()
 	add_child(music)
 	var args := OS.get_cmdline_user_args()
+	if args.has("creaturetest"):
+		Game.start_new(4242)
+		_start("new")
+		var cs = load("res://tests/creature_showcase.gd").new()
+		cs.root = session
+		session.bot_driven = true
+		add_child(cs)
+		return
 	if args.has("menutest"):
 		show_menu()
 		_menu_shots()

@@ -821,6 +821,7 @@ static func make_icon(def: Dictionary, seed: int) -> Image:
 		_:
 			_rect(img, 8, 8, 16, 16, cols[1])
 	_polish(img)
+	_glint(img)
 	_outline(img)
 	_shadow(img)
 	return img
@@ -843,8 +844,11 @@ static func _polish(img: Image) -> void:
 			elif dn or rt:
 				c = c.darkened(0.3)
 			else:
-				# soft vertical gradient for depth
-				c = c.lightened(0.08 * (1.0 - y / float(S))) if y < S / 2 else c.darkened(0.1 * (y / float(S) - 0.5))
+				# directional light from the top-left: smooth bevel-like shading for volume
+				var k := (x + y) / float(2 * S)
+				c = c.lightened(0.16 * (0.5 - k) * 2.0) if k < 0.5 else c.darkened(0.22 * (k - 0.5) * 2.0)
+				if _h(x, y, 77) < 0.04:
+					c = c.lightened(0.12)
 			img.set_pixel(x, y, c)
 
 
@@ -876,3 +880,71 @@ static func _outline(img: Image) -> void:
 				if q.x >= 0 and q.y >= 0 and q.x < S and q.y < S and src.get_pixel(q.x, q.y).a > 0.1:
 					img.set_pixel(x, y, ol)
 					break
+
+
+# ---------------------------------------------------------------- creature skins
+
+## Luminance pattern (RGB around 1.0) multiplied with each body part's colour. Seamless 32×32.
+static func make_skin(kind: String, seed: int) -> Image:
+	var img := _blank()
+	var n := _noise(seed, 0.25, 3)
+	var n2 := _noise(seed + 9, 0.12, 2)
+	var pts := _rand_pts(10, seed)
+	for y in S:
+		for x in S:
+			var i := y * S + x
+			var v := 1.0
+			match kind:
+				"fur":
+					v = 0.78 + n[i] * 0.34 + (_h(x, y, seed) - 0.5) * 0.22
+					if (x + y * 3) % 7 == 0 and _h(x, y, seed + 1) < 0.5:
+						v -= 0.12
+				"scales":
+					var row := y / 4
+					var off := 2 if row % 2 == 1 else 0
+					var lx := posmod(x + off, 4)
+					var ly := y % 4
+					v = 1.05 - (lx + ly) * 0.045
+					if ly == 3 or lx == 3:
+						v = 0.68
+					v += (n[i] - 0.5) * 0.18
+				"chitin":
+					var vo := _voronoi(x, y, pts)
+					v = 0.8 + clampf(vo.x / 7.0, 0.0, 0.4)
+					if vo.y - vo.x < 1.1:
+						v = 0.55
+					elif vo.x < 1.2:
+						v = 1.22
+				"plates":
+					v = 0.92 + (n[i] - 0.5) * 0.08
+					if x % 16 == 0 or y % 16 == 0:
+						v = 0.6
+					elif x % 16 == 1 or y % 16 == 1:
+						v = 1.18
+					if (x % 16 == 4 or x % 16 == 12) and (y % 16 == 4 or y % 16 == 12):
+						v = 1.3
+				"magma":
+					var vo2 := _voronoi(x, y, pts)
+					v = 0.75 + n[i] * 0.2
+					if vo2.y - vo2.x < 1.3:
+						v = 1.7
+				"spots":
+					v = 0.85 + n2[i] * 0.25
+					var vo3 := _voronoi(x, y, pts)
+					if vo3.x < 2.2:
+						v = 1.25 if vo3.x < 1.4 else 0.7
+				"stripes":
+					var band := sin((x + n2[i] * 10.0) * TAU / 8.0)
+					v = 0.82 + n[i] * 0.2 + (0.25 if band > 0.55 else 0.0)
+			v = clampf(v, 0.3, 1.8)
+			img.set_pixel(x, y, Color(v * 0.5, v * 0.5, v * 0.5, 1.0))
+	return img
+
+
+## Small specular glint on the brightest top-left pixel cluster.
+static func _glint(img: Image) -> void:
+	for y in range(2, S / 2):
+		for x in range(2, S / 2):
+			if img.get_pixel(x, y).a > 0.5 and img.get_pixel(x - 1, y - 1).a < 0.5 and img.get_pixel(x + 1, y + 1).a > 0.5:
+				img.set_pixel(x + 1, y + 1, img.get_pixel(x + 1, y + 1).lightened(0.55))
+				return

@@ -37,10 +37,15 @@ GitHub Actions `Android build`: green on every commit since the SDK fix (the fir
 | Same + merged creature meshes, cap 8 on mobile | Continue, 8 creatures | 36–42 FPS while chunks streamed, then 41–42 |
 | Touch input via `adb shell input` (swipe-look, hold MINE) | | Worked; screen captured in `docs/screenshots/android_05_spawn.jpg` |
 
-**Not yet verified on the device:** the final build with the UI overhaul, NPCs, music, Stellar
-Store, rare drops and structures. The APK was built and signed, but the phone disconnected from USB
-before it could be installed. These features passed the desktop and CI tests above. Re-test on
-device before submission (checklist item in [SUBMISSION_CHECKLIST.md](SUBMISSION_CHECKLIST.md)).
+**v0.1.0 build on the device (Nov 10):** installed and launched. Title screen, Continue, the HUD and touch
+buttons work. FPS was 40–47 while exploring with 8 creatures, dipping to 28–30 while new chunks
+streamed in. Problems found and fixed in v0.1.1: menus and settings could not be scrolled by touch
+(mouse emulation was off), the title menu overflowed the screen, the mining laser launched
+creatures, and there was a constant noise "hiss" in the sound.
+
+**v0.1.1 build:** passed the headless suite (47/47), the autoplay bot (19/19) and the creature
+knockback test on desktop. It was **not** installed on the phone because the USB/adb connection
+dropped. Install it from the release and re-check scrolling and FPS.
 
 ## Not covered by automated tests
 Story progression past the first directives, every side job, the obelisk trial and starfall events,

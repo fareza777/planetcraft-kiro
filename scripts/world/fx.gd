@@ -13,6 +13,8 @@ var _label_t: Array[float] = []
 var _next_label := 0
 var ambient: CPUParticles3D
 var weather: CPUParticles3D
+var biome_fx: CPUParticles3D
+var _biome_kind := ""
 var _cube_mat: StandardMaterial3D
 var _glow_mat: StandardMaterial3D
 
@@ -150,6 +152,68 @@ func setup_ambient(planet: Dictionary) -> void:
 	weather.mesh = wq
 	weather.emitting = false
 	add_child(weather)
+	biome_fx = CPUParticles3D.new()
+	biome_fx.amount = 46
+	biome_fx.lifetime = 7.0
+	biome_fx.preprocess = 7.0
+	biome_fx.local_coords = false
+	biome_fx.emission_shape = CPUParticles3D.EMISSION_SHAPE_BOX
+	biome_fx.emission_box_extents = Vector3(15, 4, 15)
+	biome_fx.direction = Vector3(0.3, -1, 0.1)
+	biome_fx.spread = 40.0
+	biome_fx.gravity = Vector3(0.4, -0.35, 0.2)
+	biome_fx.initial_velocity_min = 0.2
+	biome_fx.initial_velocity_max = 0.7
+	biome_fx.angular_velocity_min = -180.0
+	biome_fx.angular_velocity_max = 180.0
+	biome_fx.angle_min = 0.0
+	biome_fx.angle_max = 360.0
+	biome_fx.scale_amount_min = 0.6
+	biome_fx.scale_amount_max = 1.3
+	var lq := QuadMesh.new()
+	lq.size = Vector2(0.14, 0.1)
+	var lm := StandardMaterial3D.new()
+	lm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	lm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	lm.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES
+	lm.vertex_color_use_as_albedo = true
+	lm.cull_mode = BaseMaterial3D.CULL_DISABLED
+	lq.material = lm
+	biome_fx.mesh = lq
+	biome_fx.emitting = false
+	add_child(biome_fx)
+
+
+## Biome particles: glowwood leaves, dune dust, crystal sparkles, snow drift, ash flakes.
+func set_biome(biome_id: String) -> void:
+	if biome_fx == null or biome_id == _biome_kind:
+		return
+	_biome_kind = biome_id
+	var c := Color(0, 0, 0, 0)
+	var grav := Vector3(0.4, -0.35, 0.2)
+	match biome_id:
+		"glowwood", "shards", "taiga":
+			c = Color(0.85, 0.45, 1.0) if biome_id != "taiga" else Color(0.85, 0.95, 1.0)
+		"dunes", "goldsea", "mesas":
+			c = Color(1.0, 0.75, 0.45)
+			grav = Vector3(2.2, 0.05, 0.6)
+		"barrens":
+			c = Color(0.5, 0.95, 1.0)
+			grav = Vector3(0.1, 0.25, 0.1)
+		"frostplains", "glacier":
+			c = Color(1, 1, 1)
+			grav = Vector3(1.2, -0.6, 0.3)
+		"ashplains", "calderas":
+			c = Color(1.0, 0.45, 0.2)
+			grav = Vector3(0.3, 0.6, 0.2)
+	biome_fx.emitting = c.a > 0.0 or c != Color(0, 0, 0, 0)
+	var grad := Gradient.new()
+	grad.set_color(0, Color(c.r, c.g, c.b, 0.0))
+	grad.add_point(0.15, Color(c.r, c.g, c.b, 0.85))
+	grad.add_point(0.8, Color(c.r, c.g, c.b, 0.7))
+	grad.set_color(grad.get_point_count() - 1, Color(c.r, c.g, c.b, 0.0))
+	biome_fx.color_ramp = grad
+	biome_fx.gravity = grav
 
 
 func set_weather(kind: String, color: Color) -> void:
@@ -186,6 +250,8 @@ func follow(pos: Vector3, night: bool) -> void:
 		ambient.emitting = night
 	if weather != null:
 		weather.global_position = pos + Vector3(0, 12, 0)
+	if biome_fx != null:
+		biome_fx.global_position = pos + Vector3(0, 4, 0)
 
 
 func _process(dt: float) -> void:

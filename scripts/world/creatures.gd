@@ -242,7 +242,7 @@ func ray_creature(origin: Vector3, dir: Vector3, reach: float) -> Creature:
 func laser_tick(dt: float, dmg: float) -> Creature:
 	var c := ray_creature(player.eye_pos(), player.look_dir(), Player.REACH + 2.0)
 	if c != null:
-		c.hit(dmg * dt * 2.5, player.global_position)
+		c.hit(dmg * dt * 2.5, player.global_position, 0.0)
 		if randf() < dt * 8.0:
 			fx.sparks(c.center(), Color(0.5, 0.95, 1.0), 4)
 	return c
@@ -263,6 +263,7 @@ func fire_weapon(it: Dictionary) -> void:
 	player.recoil(0.06 if not w.get("melee", false) else 0.12)
 	if w.get("melee", false):
 		sfx.play("swing", -2.0)
+		player.swing()
 		var hit_any := false
 		for c in list:
 			if not is_instance_valid(c) or not c.alive or c.tamed:
@@ -403,7 +404,7 @@ func _on_died(c: Creature) -> void:
 		boss_defeated.emit()
 	killed.emit(c.def.id)
 	list.erase(c)
-	c.queue_free()
+	c.play_death()
 
 
 func _spawn_orb(at: Vector3, item: Array, source: String) -> void:

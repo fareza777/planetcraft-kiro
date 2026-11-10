@@ -13,6 +13,17 @@ var master := 0.0
 
 
 func _ready() -> void:
+	# Master-bus limiter so overlapping sounds never clip (clipping is what crackles).
+	var bus := AudioServer.get_bus_index("Master")
+	var has_limiter := false
+	for i in AudioServer.get_bus_effect_count(bus):
+		if AudioServer.get_bus_effect(bus, i) is AudioEffectHardLimiter:
+			has_limiter = true
+	if not has_limiter:
+		var lim := AudioEffectHardLimiter.new()
+		lim.ceiling_db = -1.0
+		lim.pre_gain_db = -3.0
+		AudioServer.add_bus_effect(bus, lim)
 	_build()
 	for i in 10:
 		var p := AudioStreamPlayer.new()
@@ -60,11 +71,21 @@ func loop(name: String, on: bool, vol_db := -6.0, pitch := 1.0, dt := 0.016) -> 
 
 # ---------------------------------------------------------------- synthesis
 
-func _wav(samples: PackedFloat32Array, looped := false) -> AudioStreamWAV:
+func _wav(samples: PackedFloat32Array, looped := false, peak := 0.55) -> AudioStreamWAV:
+	# normalise every sound to the same peak, with a short fade-out so nothing ends in a click
+	var mx := 0.0001
+	for s in samples:
+		mx = maxf(mx, absf(s))
+	var g := peak / mx
+	var n := samples.size()
+	var tail := mini(220, n / 4)
 	var data := PackedByteArray()
-	data.resize(samples.size() * 2)
-	for i in samples.size():
-		data.encode_s16(i * 2, int(clampf(samples[i], -1.0, 1.0) * 32000.0))
+	data.resize(n * 2)
+	for i in n:
+		var v := samples[i] * g
+		if not looped and i > n - tail:
+			v *= float(n - i) / tail
+		data.encode_s16(i * 2, int(clampf(v, -1.0, 1.0) * 32000.0))
 	var w := AudioStreamWAV.new()
 	w.format = AudioStreamWAV.FORMAT_16_BITS
 	w.mix_rate = RATE
@@ -84,13 +105,16 @@ func _buf(sec: float) -> PackedFloat32Array:
 
 
 func _noise_burst(sec: float, cutoff: float, decay: float, gain := 1.0) -> PackedFloat32Array:
+	# two-pole low-passed noise with a 4 ms attack (no click at the start)
 	var b := _buf(sec)
 	var lp := 0.0
+	var lp2 := 0.0
 	var a := clampf(cutoff, 0.001, 1.0)
 	for i in b.size():
 		var t := i / float(RATE)
 		lp += (randf_range(-1, 1) - lp) * a
-		b[i] = lp * exp(-t * decay) * gain
+		lp2 += (lp - lp2) * a
+		b[i] = lp2 * minf(t / 0.004, 1.0) * exp(-t * decay) * gain
 	return b
 
 
@@ -130,11 +154,11 @@ func _concat(parts: Array) -> PackedFloat32Array:
 
 func _build() -> void:
 	seed(7)
-	bank["dig"] = _wav(_mix(_noise_burst(0.09, 0.35, 40.0, 0.8), _tone(0.09, 180, 90, 45, "sine", 0.5)))
-	bank["break"] = _wav(_mix(_noise_burst(0.28, 0.25, 14.0, 0.9), _tone(0.25, 140, 50, 18, "sine", 0.7)))
+	bank["dig"] = _wav(_mix(_noise_burst(0.07, 0.3, 55.0, 0.5), _tone(0.08, 260, 120, 50, "tri", 0.6)), false, 0.4)
+	bank["break"] = _wav(_mix(_mix(_noise_burst(0.3, 0.18, 13.0, 0.7), _tone(0.28, 150, 55, 16, "sine", 0.9)), _concat([_buf(0.05), _noise_burst(0.18, 0.4, 22.0, 0.35)])), false, 0.55)
 	bank["break_crystal"] = _wav(_mix(_noise_burst(0.3, 0.7, 12.0, 0.4), _mix(_tone(0.5, 1600, 1500, 7, "sine", 0.35), _tone(0.5, 2400, 2350, 9, "sine", 0.25))))
 	bank["place"] = _wav(_mix(_noise_burst(0.07, 0.5, 60.0, 0.6), _tone(0.08, 220, 110, 50, "sine", 0.6)))
-	bank["step"] = _wav(_noise_burst(0.06, 0.18, 70.0, 0.45))
+	bank["step"] = _wav(_mix(_noise_burst(0.07, 0.08, 60.0, 0.6), _tone(0.06, 110, 70, 60, "sine", 0.4)), false, 0.3)
 	bank["jump"] = _wav(_tone(0.12, 220, 420, 22, "tri", 0.35))
 	bank["land"] = _wav(_mix(_noise_burst(0.12, 0.15, 30.0, 0.9), _tone(0.12, 90, 40, 25, "sine", 0.8)))
 	bank["shoot"] = _wav(_mix(_tone(0.18, 1400, 180, 18, "saw", 0.4), _noise_burst(0.1, 0.8, 40.0, 0.25)))
@@ -153,11 +177,11 @@ func _build() -> void:
 	bank["explode"] = _wav(_mix(_noise_burst(0.9, 0.12, 4.5, 1.0), _tone(0.8, 70, 30, 5, "sine", 0.9)))
 	bank["whoosh"] = _wav(_whoosh(1.2))
 	bank["warp"] = _wav(_mix(_tone(1.6, 80, 900, 1.5, "saw", 0.3), _whoosh(1.6)))
-	bank["jet"] = _wav(_loop_noise(1.0, 0.22, 0.7), true)
-	bank["laser"] = _wav(_laser_loop(0.5), true)
-	bank["ambient"] = _wav(_ambient_loop(4.0), true)
-	bank["rover"] = _wav(_engine_loop(0.5), true)
-	bank["storm"] = _wav(_loop_noise(2.0, 0.08, 1.0), true)
+	bank["jet"] = _wav(_jet_loop(1.0), true, 0.35)
+	bank["laser"] = _wav(_laser_loop(0.5), true, 0.3)
+	bank["ambient"] = _wav(_ambient_loop(6.0), true, 0.18)
+	bank["rover"] = _wav(_engine_loop(0.5), true, 0.4)
+	bank["storm"] = _wav(_wind_loop(4.0, 0.012), true, 0.3)
 
 
 func _fm(sec: float, f: float, mod_f: float, depth: float, decay: float) -> PackedFloat32Array:
@@ -219,11 +243,37 @@ func _engine_loop(sec: float) -> PackedFloat32Array:
 	return b
 
 
-func _ambient_loop(sec: float) -> PackedFloat32Array:
-	var b := _loop_noise(sec, 0.02, 1.6)
+## Soft wind: very low-passed noise with slow gusts. Loop-safe (gust LFO completes whole cycles).
+func _wind_loop(sec: float, cutoff: float) -> PackedFloat32Array:
+	var b := _loop_noise(sec, cutoff, 1.0)
 	var n := b.size()
+	var dur := n / float(RATE)
 	for i in n:
 		var t := i / float(RATE)
-		var pad := sin(TAU * 55.0 * t) * 0.05 + sin(TAU * 82.5 * t) * 0.035 + sin(TAU * 110.0 * t + sin(TAU * 0.25 * t)) * 0.025
-		b[i] = b[i] * (0.6 + 0.4 * sin(TAU * t / sec)) + pad
+		var gust := 0.55 + 0.3 * sin(TAU * t / dur) + 0.15 * sin(TAU * 3.0 * t / dur)
+		b[i] *= gust
+	return b
+
+
+func _ambient_loop(sec: float) -> PackedFloat32Array:
+	var b := _wind_loop(sec, 0.006)
+	var n := b.size()
+	var dur := n / float(RATE)
+	# a faint alien hum on top, at loop-aligned frequencies
+	var f1: float = roundf(55.0 * dur) / dur
+	var f2: float = roundf(82.5 * dur) / dur
+	for i in n:
+		var t := i / float(RATE)
+		b[i] = b[i] * 0.8 + (sin(TAU * f1 * t) * 0.05 + sin(TAU * f2 * t) * 0.03) * (0.6 + 0.4 * sin(TAU * t / dur))
+	return b
+
+
+func _jet_loop(sec: float) -> PackedFloat32Array:
+	var b := _loop_noise(sec, 0.07, 1.0)
+	var n := b.size()
+	var dur := n / float(RATE)
+	var f: float = roundf(70.0 * dur) / dur
+	for i in n:
+		var t := i / float(RATE)
+		b[i] = b[i] * 0.7 + sin(TAU * f * t) * 0.18 + sin(TAU * f * 2.0 * t) * 0.06
 	return b

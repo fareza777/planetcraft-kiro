@@ -340,7 +340,7 @@ func _process(dt: float) -> void:
 		_loading_lbl.text = "%s %s...  %d%%\n\n%s" % ["Landing on" if mode == "arrive" else "Descending to", planet.name, int(r * 100), planet.desc]
 		if r >= 0.6 and not player.frozen:
 			loading.visible = false
-			sfx.loop("ambient", true, -16.0, 1.0, 1.0)
+			sfx.loop("ambient", true, -20.0, 1.0, 1.0)
 			_on_arrived()
 		return
 	_perf_t += dt
@@ -394,12 +394,89 @@ func _slow_update() -> void:
 	_update_waypoint()
 
 
+## Nearest block of `id` around the player, using the native PackedByteArray.find over the
+## loaded chunks in a 5×5 area (fast enough to run every second on the phone).
+func _nearest_block(ids: Array, max_hits := 40) -> Variant:
+	var pp := player.global_position
+	var c := Vector2i(floori(pp.x) >> 4, floori(pp.z) >> 4)
+	var best = null
+	var bd := 1e18
+	for dz in range(-2, 3):
+		for dx in range(-2, 3):
+			var col = world.chunks.get(c + Vector2i(dx, dz))
+			if col == null:
+				continue
+			var blocks: PackedByteArray = col.blocks
+			for id in ids:
+				var i := blocks.find(id)
+				var hits := 0
+				while i >= 0 and hits < max_hits:
+					hits += 1
+					var y := i % 128
+					var lx := (i / 128) % 16
+					var lz := i / 2048
+					var wp := Vector3(col.key.x * 16 + lx + 0.5, y + 0.5, col.key.y * 16 + lz + 0.5)
+					var d := wp.distance_squared_to(pp) + (0.0 if y > pp.y - 6 else 200.0)
+					if d < bd:
+						bd = d
+						best = wp
+					i = blocks.find(id, i + 1)
+	return best
+
+
+func _blocks_for(goal: Dictionary) -> Array:
+	var out := []
+	match goal.type:
+		"mine":
+			var b := Reg.block(String(goal.id))
+			if b > 0:
+				out.append(b)
+		"collect", "deliver":
+			for bd in Reg.blocks:
+				if bd.name != "air" and Reg.block_drop(bd.id) == goal.id and bd.get("place", true) != false:
+					out.append(bd.id)
+	return out
+
+
 func _update_waypoint() -> void:
 	var q := quests.current()
 	hud.info.waypoint = null
 	if q.is_empty():
 		return
 	var g: Dictionary = q.goal
+	var targets := _blocks_for(g)
+	if not targets.is_empty() and quests.goal_progress(q, quests.progress).x < quests.goal_progress(q, quests.progress).y:
+		var p0 = _nearest_block(targets)
+		if p0 != null:
+			hud.info.waypoint = p0
+			hud.info.wp_label = Reg.block_def(targets[0]).label
+			return
+	if g.type == "craft":
+		var r := {}
+		for rr in Reg.recipes:
+			if rr.out == g.id:
+				r = rr
+				break
+		var st: String = r.get("station", "hand")
+		if st != "hand":
+			var sp = machines.nearest(st, player.global_position, 400.0)
+			if sp != null:
+				hud.info.waypoint = Vector3(sp) + Vector3(0.5, 1.6, 0.5)
+				hud.info.wp_label = Reg.item_label(st)
+				return
+	if g.type == "kill" or g.type == "tame":
+		var best: Creature = null
+		var bd := 1e9
+		for c in creatures.list:
+			if is_instance_valid(c) and c.alive and not c.tamed and (String(g.id) == "" or c.def.id == g.id) and (g.type != "tame" or c.def.get("tame", "") != ""):
+				var d := c.global_position.distance_to(player.global_position)
+				if d < bd:
+					bd = d
+					best = c
+		if best != null:
+			hud.info.waypoint = best.center() + Vector3(0, best.height, 0)
+			hud.info.wp_label = best.def.name
+			return
 	if g.type == "talk":
 		var p = npcs.position_of(g.id)
 		if p != null:
@@ -480,6 +557,7 @@ func _update_environment(dt: float) -> void:
 	if int(Time.get_ticks_msec() / 500) % 2 == 0 and world.gen.biomes.size() > 0:
 		var col := world.gen.column(floori(pos.x), floori(pos.z))
 		hud.info.biome = world.gen.biomes[col[1]].name if exposed else "Underground"
+		fx.set_biome(world.gen.biomes[col[1]].id if exposed else "")
 
 
 func _lamp_on(exposed: bool) -> bool:
@@ -618,7 +696,7 @@ func _on_crafted(item: String, n: int) -> void:
 
 func _on_quest_done(q: Dictionary) -> void:
 	sfx.play("quest", 0.0)
-	hud.toast("✔ Directive complete: " + q.title, TF.AMBER)
+	hud.celebrate(q.title)
 	for r in q.get("reward", []):
 		player.inv.add(r[0], int(r[1]))
 		hud.toast("Reward: %s ×%d" % [Reg.item_label(r[0]), int(r[1])], TF.GREEN)

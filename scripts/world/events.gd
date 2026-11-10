@@ -185,7 +185,7 @@ func _process(dt: float) -> void:
 	sky.storm = intensity * (0.9 if is_storm() else 0.35)
 	sky.storm_color = storm_color()
 	fx.set_weather(weather if intensity > 0.2 else "clear", storm_color().lightened(0.3))
-	sfx.loop("storm", is_storm() and intensity > 0.2, -10.0 + intensity * 6.0, 1.0, dt)
+	sfx.loop("storm", is_storm() and intensity > 0.2, -16.0 + intensity * 4.0, 1.0, dt)
 	player.gravity = base_gravity * (0.45 + 0.35 * sin(Time.get_ticks_msec() * 0.0004) if weather == "gravity_anomaly" else 1.0)
 	_tick_trial(dt)
 	_tick_starfall(dt)

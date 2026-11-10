@@ -43,6 +43,14 @@ var _glow_mat: StandardMaterial3D
 var _boxes: Dictionary = {}
 var _trail: Array[Vector3] = []
 var hp_bar: MeshInstance3D
+var head_node: Node3D
+var tail_node: Node3D
+var _lunge := 0.0
+var _breath := randf() * TAU
+var _dying := 0.0
+const SKINS := {"mossback": "fur", "skitter": "chitin", "glider": "stripes", "stalker": "scales", "frostmaw": "fur",
+	"magmite": "magma", "dunewyrm": "scales", "voidray": "spots", "sentinel": "plates", "void_guardian": "plates", "hive_drone": "chitin"}
+static var _skin_cache := {}
 
 
 func setup(d: Dictionary, w: VoxelWorld, m: Node) -> void:
@@ -84,9 +92,22 @@ const _FACES := [
 ]
 
 
+func _skin() -> Texture2D:
+	var kind: String = SKINS.get(String(def.get("id", "")), "fur")
+	if not _skin_cache.has(kind):
+		var tf = load("res://scripts/voxel/texture_factory.gd")
+		var img: Image = tf.make_skin(kind, hash(kind))
+		img.generate_mipmaps()
+		_skin_cache[kind] = ImageTexture.create_from_image(img)
+	return _skin_cache[kind]
+
+
 func _finalize() -> void:
 	_body_mat = StandardMaterial3D.new()
 	_body_mat.vertex_color_use_as_albedo = true
+	_body_mat.albedo_texture = _skin()
+	_body_mat.albedo_color = Color(2.0, 2.0, 2.0)
+	_body_mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST_WITH_MIPMAPS
 	_body_mat.roughness = 0.85
 	_body_mat.emission_enabled = true
 	_body_mat.emission = Color(0, 0, 0)
@@ -115,13 +136,17 @@ func _finalize() -> void:
 					var shade := 1.0 if n.y > 0.5 else (0.6 if n.y < -0.5 else 0.82)
 					var c := Color(col.r * shade, col.g * shade, col.b * shade) if not glow else col
 					var cs := []
+					var uvs := []
+					var texels := 2.6
 					for k in [[-1, -1], [1, -1], [1, 1], [-1, 1]]:
 						var lp: Vector3 = n * hn + u * hu * k[0] + v * hv * k[1]
 						cs.append(basis * lp + b[1])
+						uvs.append(Vector2(hu * k[0], hv * k[1]) * texels + Vector2(b[1].x + b[1].z, b[1].y) * texels)
 					var wn: Vector3 = basis * n
 					for idx in [0, 2, 1, 0, 3, 2]:
 						st.set_color(c)
 						st.set_normal(wn)
+						st.set_uv(uvs[idx])
 						st.add_vertex(cs[idx])
 			if any:
 				var mi := MeshInstance3D.new()
@@ -159,7 +184,9 @@ func _build() -> void:
 			_part(pivot, torso, Vector3(0, leg_h + torso.y * 0.5, 0), mb)
 			_part(pivot, Vector3(torso.x * 0.9, 0.12 * s, torso.z * 0.8), Vector3(0, leg_h + torso.y + 0.04 * s, 0), ma)
 			var head := _joint(pivot, Vector3(0, leg_h + torso.y * 0.75, -torso.z * 0.55))
+			head_node = head
 			_part(head, Vector3(0.45 * s, 0.4 * s, 0.45 * s), Vector3(0, 0, -0.15 * s), mb)
+			_part(head, Vector3(0.3 * s, 0.14 * s, 0.2 * s), Vector3(0, -0.12 * s, -0.36 * s), ma)
 			_part(head, Vector3(0.08 * s, 0.08 * s, 0.05 * s), Vector3(-0.12 * s, 0.06 * s, -0.38 * s), mg)
 			_part(head, Vector3(0.08 * s, 0.08 * s, 0.05 * s), Vector3(0.12 * s, 0.06 * s, -0.38 * s), mg)
 			segments.append(head)
@@ -170,7 +197,9 @@ func _build() -> void:
 					var j := _joint(pivot, Vector3(lx * torso.x * 0.38, leg_h, lz * torso.z * 0.38))
 					_part(j, Vector3(0.16 * s, leg_h, 0.16 * s), Vector3(0, -leg_h * 0.5, 0), ma)
 					legs.append(j)
-			_part(pivot, Vector3(0.12 * s, 0.12 * s, 0.5 * s), Vector3(0, leg_h + torso.y * 0.6, torso.z * 0.7), mb)
+			tail_node = _joint(pivot, Vector3(0, leg_h + torso.y * 0.6, torso.z * 0.5))
+			_part(tail_node, Vector3(0.12 * s, 0.12 * s, 0.55 * s), Vector3(0, 0, 0.27 * s), mb)
+			_part(tail_node, Vector3(0.16 * s, 0.16 * s, 0.12 * s), Vector3(0, 0, 0.56 * s), mg)
 		"crawler":
 			height = 0.45 * s
 			_part(pivot, Vector3(0.7 * s, 0.25 * s, 0.9 * s), Vector3(0, 0.28 * s, 0), mb)
@@ -270,15 +299,23 @@ func _build_hp_bar() -> void:
 
 # ---------------------------------------------------------------- combat
 
-func hit(dmg: float, from: Vector3) -> void:
+## knock: 0 for continuous damage (mining laser), 1 for a normal hit.
+func hit(dmg: float, from: Vector3, knock := 1.0) -> void:
 	if not alive:
 		return
 	hp -= dmg
-	flash = 0.12
+	flash = maxf(flash, 0.12 if knock > 0.0 else 0.04)
 	var away := global_position - from
 	away.y = 0
-	if away.length() > 0.01:
-		vel += away.normalized() * (4.0 / maxf(size, 0.6)) + Vector3(0, 2.0 if not fly else 0.5, 0)
+	if knock > 0.0 and away.length() > 0.01:
+		var mass := maxf(size, 0.6) * (3.0 if def.get("boss", false) else 1.0)
+		vel += away.normalized() * (3.2 / mass) * knock + Vector3(0, (1.6 if not fly else 0.3) * knock / mass, 0)
+		var hv := Vector2(vel.x, vel.z)
+		if hv.length() > 7.0:
+			hv = hv.normalized() * 7.0
+			vel.x = hv.x
+			vel.z = hv.y
+		vel.y = minf(vel.y, 4.0)
 	hp_bar.visible = true
 	(hp_bar.mesh as QuadMesh).size.x = maxf(0.02, hp / max_hp) * minf(1.0 + size * 0.3, 3.0)
 	if def.behavior == "passive" and not tamed:
@@ -348,7 +385,8 @@ func tick(dt: float, player: Player, near: bool) -> void:
 				prey.hit(float(def.dmg), global_position)
 			else:
 				attacked_player.emit(self, float(def.dmg))
-			vel += flat.normalized() * 3.0
+			vel += flat.normalized() * 2.0
+			_lunge = 0.35
 	if fly:
 		_move_fly(dt, want, tgt)
 	else:
@@ -451,10 +489,38 @@ func _move(axis: int, d: float) -> bool:
 	return false
 
 
+## Death animation: topple, sink and shrink, then free.
+func play_death() -> void:
+	alive = false
+	hp_bar.visible = false
+	var tw := create_tween().set_parallel(true).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tw.tween_property(pivot, "rotation:z", PI * 0.5 * (1.0 if randf() < 0.5 else -1.0), 0.45)
+	tw.tween_property(pivot, "position:y", -height * 0.3, 0.6)
+	tw.tween_property(self, "scale", Vector3.ONE * 0.05, 0.35).set_delay(0.45)
+	tw.chain().tween_callback(queue_free)
+
+
 func _animate(dt: float) -> void:
 	var hv := Vector2(vel.x, vel.z).length()
 	phase += dt * (2.0 + hv * 3.5)
 	var amp := clampf(hv / maxf(speed, 0.1), 0.0, 1.0)
+	_breath += dt * 2.2
+	pivot.scale = Vector3(1.0, 1.0 + sin(_breath) * 0.025 * (1.0 - amp), 1.0) if def.plan != "hopper" else pivot.scale
+	if _lunge > 0.0:
+		_lunge -= dt
+		pivot.position.z = -sin(clampf(_lunge / 0.35, 0.0, 1.0) * PI) * 0.35 * size
+	else:
+		pivot.position.z = 0.0
+	if tail_node != null:
+		tail_node.rotation.y = sin(phase * (0.6 if amp < 0.2 else 1.4)) * (0.5 if amp < 0.2 else 0.3)
+		tail_node.rotation.x = -0.25 + sin(_breath) * 0.05
+	if head_node != null and mgr != null and mgr.player != null:
+		var to: Vector3 = mgr.player.global_position - global_position
+		if to.length() < 10.0 and state != "flee":
+			var local_yaw := wrapf(atan2(-to.x, -to.z) - rotation.y, -PI, PI)
+			head_node.rotation.y = lerp_angle(head_node.rotation.y, clampf(local_yaw, -0.9, 0.9), dt * 5.0)
+		else:
+			head_node.rotation.y = lerp_angle(head_node.rotation.y, sin(phase * 0.2) * 0.4, dt * 2.0)
 	for i in legs.size():
 		var off := 0.0 if (i % 2 == 0) else PI
 		if def.plan == "crawler":

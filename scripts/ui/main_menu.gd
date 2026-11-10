@@ -121,10 +121,18 @@ func _build_ui() -> void:
 	var sub := TF.label("G A L A C T I C   S U R V I V A L", 22, TF.AMBER)
 	sub.position = Vector2(212, 120)
 	_root.add_child(sub)
+	var menu_scroll := ScrollContainer.new()
+	menu_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	menu_scroll.set_anchors_and_offsets_preset(Control.PRESET_LEFT_WIDE)
+	menu_scroll.offset_left = 48
+	menu_scroll.offset_top = 168
+	menu_scroll.offset_bottom = -52
+	menu_scroll.custom_minimum_size.x = 500
+	_root.add_child(menu_scroll)
+	TouchScroll.attach(menu_scroll)
 	_menu = VBoxContainer.new()
-	_menu.position = Vector2(64, 200)
-	_menu.add_theme_constant_override("separation", 12)
-	_root.add_child(_menu)
+	_menu.add_theme_constant_override("separation", 8)
+	menu_scroll.add_child(_menu)
 	if Game.has_save() and not Game.meta.is_empty():
 		_menu.add_child(_save_card())
 	_menu.add_child(_menu_button("NEW EXPEDITION", "Generate a new star system from a seed", _show_new, TF.CYAN))
@@ -149,7 +157,9 @@ func _build_ui() -> void:
 	await get_tree().process_frame
 	var i := 0
 	for c in _menu.get_children():
-		UiAnim.slide_in(c, Vector2(-60, 0), 0.25 + i * 0.08, 0.45)
+		c.modulate.a = 0.0
+		var tw := c.create_tween()
+		tw.tween_property(c, "modulate:a", 1.0, 0.35).set_delay(0.25 + i * 0.08)
 		i += 1
 	_next_ticker()
 
@@ -157,10 +167,10 @@ func _build_ui() -> void:
 func _menu_button(text: String, hint: String, cb: Callable, accent: Color) -> Button:
 	var b := Button.new()
 	b.focus_mode = Control.FOCUS_NONE
-	b.custom_minimum_size = Vector2(460, 74 if hint != "" else 60)
+	b.custom_minimum_size = Vector2(460, 66 if hint != "" else 52)
 	b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	b.text = ("   " + text + ("\n   " + hint if hint != "" else ""))
-	b.add_theme_font_size_override("font_size", 22)
+	b.add_theme_font_size_override("font_size", 20)
 	var n := StyleBoxFlat.new()
 	n.bg_color = Color(0.05, 0.06, 0.14, 0.82)
 	n.border_color = Color(accent.r, accent.g, accent.b, 0.9)
@@ -189,7 +199,7 @@ func _save_card() -> Control:
 	var ago_t := "%d min ago" % (ago / 60) if ago < 3600 else ("%d h ago" % (ago / 3600) if ago < 86400 else "%d days ago" % (ago / 86400))
 	var q := int(m.get("quests", {}).get("index", 0))
 	var b := _menu_button("CONTINUE", "%s  ·  directive %d/%d  ·  saved %s" % [pl.get("name", "?"), q + 1, Reg.quests.size(), ago_t], _on_continue, TF.GREEN)
-	b.custom_minimum_size.y = 84
+	b.custom_minimum_size.y = 72
 	return b
 
 
@@ -225,6 +235,7 @@ func _build_overlay() -> void:
 	head.add_child(t)
 	head.add_child(TF.button("✕", _hide_overlay, 64))
 	var scroll := ScrollContainer.new()
+	TouchScroll.attach(scroll)
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	v.add_child(scroll)

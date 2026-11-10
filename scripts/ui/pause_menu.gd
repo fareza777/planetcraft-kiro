@@ -41,6 +41,7 @@ func _ready() -> void:
 		btn.add_theme_stylebox_override("hover", TF.box(Color(0.12, 0.16, 0.3, 0.95), b[2], 14, 2, 18))
 		_left.add_child(btn)
 	var scroll := ScrollContainer.new()
+	TouchScroll.attach(scroll)
 	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	h.add_child(scroll)
@@ -64,7 +65,8 @@ func _on_vis() -> void:
 		var i := 0
 		for c in _left.get_children():
 			if c is Button:
-				UiAnim.slide_in(c, Vector2(-40, 0), 0.05 + i * 0.05, 0.3)
+				c.modulate.a = 0.0
+				c.create_tween().tween_property(c, "modulate:a", 1.0, 0.25).set_delay(0.05 + i * 0.05)
 				i += 1
 
 

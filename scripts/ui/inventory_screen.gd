@@ -345,6 +345,7 @@ func _build_fabricate() -> Control:
 	h.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	v.add_child(h)
 	var scroll := ScrollContainer.new()
+	TouchScroll.attach(scroll)
 	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.size_flags_stretch_ratio = 1.4
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -536,6 +537,7 @@ func _craft(times: int) -> void:
 
 func _build_suit() -> Control:
 	var scroll := ScrollContainer.new()
+	TouchScroll.attach(scroll)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	_suit_box = VBoxContainer.new()
 	_suit_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -546,6 +548,7 @@ func _build_suit() -> Control:
 
 func _build_quests() -> Control:
 	var scroll := ScrollContainer.new()
+	TouchScroll.attach(scroll)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	_quest_box = VBoxContainer.new()
 	_quest_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
