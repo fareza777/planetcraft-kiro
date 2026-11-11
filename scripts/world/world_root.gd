@@ -310,6 +310,8 @@ func _build_ui() -> void:
 
 func _apply_settings() -> void:
 	touch.sensitivity = float(Game.settings.sensitivity)
+	player.cam.fov = float(Game.settings.get("fov", 72))
+	touch._layout()
 	hud.info.show_fps = Game.settings.show_fps
 	sky.env.glow_enabled = Game.settings.glow
 	sky.sky_mat.set_shader_parameter("clouds", 1.0 if Game.settings.clouds else 0.0)

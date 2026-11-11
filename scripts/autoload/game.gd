@@ -7,7 +7,8 @@ const SAVE_DIR := "user://saves/slot0/"
 const SETTINGS_PATH := "user://settings.cfg"
 const SAVE_VERSION := 1
 
-var settings := {"render_distance": 6, "sensitivity": 1.0, "show_fps": true, "glow": true, "touch": true, "render_scale": 1.0, "clouds": true, "button_scale": 1.0, "invert_y": false, "master_volume": 0.85, "ambience": 0.7}
+var settings := {"render_distance": 6, "sensitivity": 1.0, "show_fps": true, "glow": true, "touch": true, "render_scale": 1.0, "clouds": true, "button_scale": 1.0, "invert_y": false, "master_volume": 0.85, "ambience": 0.7, "fov": 72, "auto_jump": true, "camera_shake": true, "damage_numbers": true, "haptics": true}
+var _defaults := {}
 var world_seed := 0
 var planet_id := "verdania"
 var continue_requested := false
@@ -15,6 +16,7 @@ var meta: Dictionary = {}
 
 
 func _ready() -> void:
+	_defaults = settings.duplicate()
 	load_settings()
 	load_profile()
 	if not OS.has_feature("mobile") and not DisplayServer.is_touchscreen_available():
@@ -45,6 +47,26 @@ func load_settings() -> void:
 		return
 	for k in settings:
 		settings[k] = cf.get_value("settings", k, settings[k])
+
+
+func reset_settings() -> void:
+	var touch: bool = settings.touch
+	settings = _defaults.duplicate()
+	settings.touch = touch
+	if OS.has_feature("mobile"):
+		settings.render_distance = 5
+		settings.glow = false
+		settings.render_scale = 0.6
+	save_settings()
+	apply_render_scale()
+	apply_audio()
+
+
+func delete_save() -> void:
+	if DirAccess.dir_exists_absolute(SAVE_DIR):
+		for f in DirAccess.get_files_at(SAVE_DIR):
+			DirAccess.remove_absolute(SAVE_DIR + f)
+	meta = {}
 
 
 func save_settings() -> void:

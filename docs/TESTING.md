@@ -47,6 +47,8 @@ creatures, and there was a constant noise "hiss" in the sound.
 knockback test on desktop. It was **not** installed on the phone because the USB/adb connection
 dropped. Install it from the release and re-check scrolling and FPS.
 
+**v0.1.2 build:** new icon, splash, intro, settings, Rate/Share. Headless 47/47 and the menu screenshots pass on desktop. Not yet run on the phone (adb disconnected). Share and vibration use Android-only APIs and are **untested on a device**.
+
 ## Not covered by automated tests
 Story progression past the first directives, every side job, the obelisk trial and starfall events,
 terraforming to 100%, the boss fight and the store purchase flow were implemented and compile, but

@@ -11,7 +11,7 @@ PlanetCraft ships **no third-party art, model, music or sound assets**.
 | Sky, terrain lighting, water | Shaders written for this project | `shaders/` |
 | Sound effects (28) | Synthesised at startup | `scripts/world/sfx.gd` |
 | Music (day/night loops) | Generative synthesis on a background thread | `scripts/world/music.gd` |
-| App icon | Hand-written SVG | `icon.svg` |
+| App icon, adaptive icon layers, boot splash | Hand-written SVG rendered by `tools/render_icons.gd` | `art/icon_full.svg`, `art/generated/` |
 | Font | Godot's built-in default font (OFL 1.1) | Engine |
 
 All of the above, except the Godot font, is original work covered by the repository's MIT license.

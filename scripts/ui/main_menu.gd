@@ -138,8 +138,16 @@ func _build_ui() -> void:
 	_menu.add_child(_menu_button("NEW EXPEDITION", "Generate a new star system from a seed", _show_new, TF.CYAN))
 	_menu.add_child(_menu_button("STELLAR STORE", "%d shards · suits, lasers, rovers, ships, kits" % int(Game.profile.shards), _show_store, Color(1.0, 0.75, 0.2)))
 	_menu.add_child(_menu_button("SETTINGS", "Graphics, controls, audio", _show_settings, TF.CYAN))
-	_menu.add_child(_menu_button("ABOUT", "Credits and how this game was made", _show_about, Color(0.75, 0.5, 1.0)))
-	_menu.add_child(_menu_button("QUIT", "", func() -> void: get_tree().quit(), TF.RED))
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	_menu.add_child(row)
+	for b in [["ABOUT", _show_about, Color(0.75, 0.5, 1.0)], ["RATE", _rate, TF.AMBER], ["SHARE", _share, TF.GREEN], ["QUIT", func() -> void: get_tree().quit(), TF.RED]]:
+		var mb := _menu_button(b[0], "", b[1], b[2])
+		mb.custom_minimum_size = Vector2(109, 52)
+		mb.alignment = HORIZONTAL_ALIGNMENT_CENTER
+		mb.text = b[0]
+		mb.add_theme_font_size_override("font_size", 17)
+		row.add_child(mb)
 	_ticker = TF.label("", 17, TF.TEXT)
 	_ticker.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
 	_ticker.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
@@ -320,8 +328,42 @@ func _apply_settings() -> void:
 	sky.sky_mat.set_shader_parameter("clouds", 1.0 if Game.settings.clouds else 0.0)
 
 
+func _rate() -> void:
+	Platform.rate()
+
+
+func _share() -> void:
+	var text := "I'm surviving alien worlds in PlanetCraft: Galactic Survival, an offline voxel sandbox for Android. %s" % Platform.REPO_URL
+	if not Platform.share(text):
+		_ticker.text = "Link copied to clipboard"
+		_ticker.modulate.a = 1.0
+
+
 func _show_about() -> void:
 	await _open_overlay("ABOUT")
+	var head := HBoxContainer.new()
+	head.add_theme_constant_override("separation", 18)
+	_overlay_body.add_child(head)
+	var ic := TextureRect.new()
+	ic.texture = load("res://art/generated/icon_192.png")
+	ic.custom_minimum_size = Vector2(110, 110)
+	ic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	head.add_child(ic)
+	var hv := VBoxContainer.new()
+	head.add_child(hv)
+	hv.add_child(TF.label("PlanetCraft: Galactic Survival", 26, TF.CYAN))
+	hv.add_child(TF.label("Version %s  ·  F7 Developer" % ProjectSettings.get_setting("application/config/version"), 17, TF.DIM))
+	var links := HBoxContainer.new()
+	hv.add_child(links)
+	links.add_child(TF.button("Rate", _rate, 120))
+	links.add_child(TF.button("Share", _share, 120))
+	links.add_child(TF.button("Source code", func() -> void: Platform.open_url(Platform.REPO_URL), 180))
+	links.add_child(TF.button("Licenses", func() -> void: Platform.open_url(Platform.REPO_URL + "/blob/main/THIRD_PARTY_NOTICES.md"), 150))
+	var stats := TF.label("Lifetime Stellar Shards found: %d" % int(Game.profile.get("lifetime", 0)), 16, TF.AMBER)
+	_overlay_body.add_child(stats)
+	var privacy := TF.label("Privacy: the game collects no personal data. Saves, settings and purchases stay on this device. Rate, Share, Source code and Licenses open other apps only when you tap them.", 15, TF.DIM)
+	privacy.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_overlay_body.add_child(privacy)
 	var txt := """PlanetCraft: Galactic Survival is an original offline voxel sandbox by F7 Developer.
 
 Survive on alien worlds, mine and build, automate a colony, tame creatures, fly between six worlds and terraform dead planets into living ones.

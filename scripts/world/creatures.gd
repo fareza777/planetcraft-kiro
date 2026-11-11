@@ -286,7 +286,8 @@ func _damage_creature(c: Creature, dmg: float, col: Color) -> void:
 	var crit := randf() < 0.12
 	var d := dmg * (2.0 if crit else 1.0)
 	c.hit(d, player.global_position)
-	fx.number(c.center() + Vector3(0, c.height * 0.5, 0), ("%d!" % int(d)) if crit else str(int(d)), Color(1, 0.85, 0.3) if crit else Color.WHITE)
+	if Game.settings.get("damage_numbers", true):
+		fx.number(c.center() + Vector3(0, c.height * 0.5, 0), ("%d!" % int(d)) if crit else str(int(d)), Color(1, 0.85, 0.3) if crit else Color.WHITE)
 	fx.sparks(c.center(), col, 8)
 	sfx.play("hit", -3.0)
 
@@ -373,6 +374,7 @@ func _on_attack_player(c: Creature, dmg: float) -> void:
 
 
 func _hurt_player(dmg: float, reason: String) -> void:
+	Platform.vibrate(45)
 	player.stats.damage(dmg, reason)
 	player.shake(0.35)
 	sfx.play("hurt", 0.0)

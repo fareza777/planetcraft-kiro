@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="35%" r="80%">
+      <stop offset="0" stop-color="#3b1f78"/>
+      <stop offset="0.55" stop-color="#160a35"/>
+      <stop offset="1" stop-color="#05030d"/>
+    </radialGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#4fe3ff" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#4fe3ff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="planet" x1="0.15" y1="0.1" x2="0.85" y2="0.95">
+      <stop offset="0" stop-color="#9ff8ff"/>
+      <stop offset="0.35" stop-color="#3fd6c8"/>
+      <stop offset="0.7" stop-color="#2a8f8a"/>
+      <stop offset="1" stop-color="#3d1a6e"/>
+    </linearGradient>
+    <linearGradient id="ring" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ffb02e" stop-opacity="0.2"/>
+      <stop offset="0.5" stop-color="#ffd27a"/>
+      <stop offset="1" stop-color="#ff8a1f" stop-opacity="0.3"/>
+    </linearGradient>
+    <linearGradient id="top" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5ff0d2"/>
+      <stop offset="1" stop-color="#22a090"/>
+    </linearGradient>
+    <clipPath id="pc"><circle cx="512" cy="430" r="250"/></clipPath>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+  <g fill="#ffffff">
+    <circle cx="140" cy="150" r="5"/><circle cx="860" cy="120" r="4"/><circle cx="910" cy="420" r="5"/>
+    <circle cx="100" cy="520" r="4"/><circle cx="220" cy="300" r="3"/><circle cx="780" cy="260" r="3"/>
+    <circle cx="880" cy="760" r="3"/><circle cx="150" cy="820" r="4"/><circle cx="640" cy="90" r="3"/>
+  </g>
+  <circle cx="512" cy="430" r="400" fill="url(#glow)"/>
+  <!-- back half of the ring -->
+  <g transform="translate(512 440) rotate(-16)" fill="none" stroke-linecap="round"><path d="M -440 0 A 440 105 0 0 1 440 0" stroke="#b8741f" stroke-width="30" stroke-opacity="0.75"/><path d="M -400 -6 A 400 92 0 0 1 400 -6" stroke="#ffd27a" stroke-width="6" stroke-opacity="0.45"/></g>
+  <circle cx="512" cy="430" r="250" fill="url(#planet)"/>
+  <g clip-path="url(#pc)" opacity="0.5">
+    <path d="M262 380 Q400 330 520 390 T770 360 L770 420 Q640 470 520 440 T262 450 Z" fill="#7a2fb3"/>
+    <path d="M262 520 Q380 490 500 530 T770 500 L770 560 Q650 600 500 580 T262 590 Z" fill="#2fa794"/>
+    <circle cx="610" cy="520" r="70" fill="#5a1f8c" opacity="0.6"/>
+  </g>
+  <circle cx="430" cy="330" r="70" fill="#ffffff" opacity="0.18"/>
+  <!-- front half of the ring -->
+  <g transform="translate(512 440) rotate(-16)" fill="none" stroke-linecap="round"><path d="M 440 0 A 440 105 0 0 1 -440 0" stroke="#ffb02e" stroke-width="34"/><path d="M 400 8 A 400 92 0 0 1 -400 8" stroke="#fff1c9" stroke-width="7" stroke-opacity="0.8"/><path d="M 470 6 A 470 116 0 0 1 -470 6" stroke="#ff8a1f" stroke-width="8" stroke-opacity="0.6"/></g>
+  <!-- voxel block -->
+  <g transform="translate(512 690)">
+    <polygon points="0,-150 170,-65 0,20 -170,-65" fill="url(#top)"/>
+    <polygon points="-170,-65 0,20 0,215 -170,130" fill="#6a4630"/>
+    <polygon points="170,-65 0,20 0,215 170,130" fill="#3b2a44"/>
+    <polygon points="-170,-65 0,20 0,62 -170,-23" fill="#22a090"/>
+    <polygon points="170,-65 0,20 0,62 170,-23" fill="#1a7a70"/>
+    <polygon points="-110,70 -60,95 -60,150 -110,125" fill="#ff9a3a"/>
+    <polygon points="70,75 120,50 120,105 70,130" fill="#4fe3ff"/>
+    <polygon points="0,-150 170,-65 0,20 -170,-65" fill="none" stroke="#c8fff3" stroke-width="6" stroke-opacity="0.7"/>
+    <polygon points="-40,-110 -10,-125 20,-110 -10,-95" fill="#ff7af0"/><polygon points="-10,-125 -10,-170 20,-150 20,-110" fill="#4fe3ff"/><polygon points="-40,-110 -40,-150 -10,-170 -10,-125" fill="#9ff3ff"/>
+    <polygon points="-170,-23 -150,-13 -150,10 -130,20 -130,-3 -110,7 -110,-3 -90,7" fill="#22a090"/>
+  </g>
+</svg>

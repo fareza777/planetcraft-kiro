@@ -7,12 +7,16 @@ config_version=5
 
 config/name="PlanetCraft: Galactic Survival"
 config/description="Offline voxel sandbox: survive, build, automate and terraform alien worlds."
-config/version="0.1.0"
+config/version="0.1.2"
 run/main_scene="res://scenes/main.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
-config/icon="res://icon.svg"
+config/icon="res://art/generated/icon_512.png"
 boot_splash/bg_color=Color(0.03, 0.02, 0.07, 1)
-boot_splash/show_image=false
+boot_splash/show_image=true
+boot_splash/image="res://art/generated/splash.png"
+boot_splash/fullsize=false
+boot_splash/use_filter=true
+config/windows_native_icon=""
 
 [autoload]
 

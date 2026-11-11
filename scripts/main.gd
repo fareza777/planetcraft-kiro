@@ -24,6 +24,11 @@ func _ready() -> void:
 		show_menu()
 		_menu_shots()
 		return
+	if not args.has("autotest") and not args.has("creaturetest"):
+		var intro := Intro.new()
+		add_child(intro)
+		intro.finished.connect(show_menu)
+		return
 	if args.has("autotest"):
 		Game.start_new(4242)
 		for a in args:

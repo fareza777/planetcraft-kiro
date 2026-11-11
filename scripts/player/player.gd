@@ -275,6 +275,8 @@ func _process(dt: float) -> void:
 
 
 func shake(a: float) -> void:
+	if not Game.settings.get("camera_shake", true):
+		return
 	_shake = maxf(_shake, a)
 
 
@@ -358,7 +360,7 @@ func _physics(dt: float) -> void:
 	if on_ground and not was_ground and fall > 13.0 and not in_fluid:
 		var dmg := (fall - 13.0) * 4.0 * (gravity / 9.0)
 		stats.damage(dmg, "impact")
-	if blocked_h and was_ground and mv.length() > 0.3 and not in_fluid:
+	if blocked_h and was_ground and mv.length() > 0.3 and not in_fluid and Game.settings.get("auto_jump", true):
 		# auto-step up one block when walking into a ledge
 		var ahead := global_position + wish.normalized() * (HALF_W + 0.35)
 		var bx := floori(ahead.x)
@@ -509,6 +511,7 @@ func _update_mining(dt: float) -> void:
 			if sfx != null:
 				sfx.play("break_crystal" if Reg.emissive[id] == 1 and Reg.kind[id] == Reg.Kind.CUTOUT else "break", -6.0)
 			shake(0.06)
+			Platform.vibrate(12)
 			block_mined.emit(p, id)
 			# plants on top fall with the block
 			var above := world.get_block(p.x, p.y + 1, p.z)

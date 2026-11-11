@@ -59,9 +59,11 @@ the reference device. See [docs/TESTING.md](docs/TESTING.md) for the exact resul
   life, change the sky colour, convert ground to soil and grass, and eventually make air breathable.
 - **Stellar Store:** offline cosmetic store on the title screen (suits, laser colours, rover and ship
   paint, starter kits) paid with Stellar Shards, a rare account-wide currency.
+- **App shell:** adaptive launcher icon, boot splash and animated studio intro, Rate (Play Store link), Share (Android share sheet through Godot's AndroidRuntime), About with privacy note and licence links.
 - **UI:** touch controls (floating joystick, drag-look, tap-to-use, hold-to-mine, vector-icon buttons),
-  keyboard and mouse on desktop, tabbed item screen, live settings (view distance, resolution scale,
-  bloom, clouds, sensitivity, button size, invert Y, volume).
+  keyboard and mouse on desktop, tabbed item screen, live settings (quality presets, view distance, resolution scale,
+  field of view, bloom, clouds, auto-jump, camera shake, damage numbers, vibration, sensitivity,
+  button size, invert Y, master and music volume, reset settings, delete save).
 
 Planned work and known gaps are listed in [docs/ROADMAP.md](docs/ROADMAP.md).
 
