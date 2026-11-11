@@ -948,3 +948,86 @@ static func _glint(img: Image) -> void:
 			if img.get_pixel(x, y).a > 0.5 and img.get_pixel(x - 1, y - 1).a < 0.5 and img.get_pixel(x + 1, y + 1).a > 0.5:
 				img.set_pixel(x + 1, y + 1, img.get_pixel(x + 1, y + 1).lightened(0.55))
 				return
+
+
+# ---------------------------------------------------------------- suits, cracks
+
+## Exosuit fabric/armour pattern in full colour. cols = [base, accent, glow].
+static func make_suit(pattern: String, cols: Array, seed: int) -> Image:
+	var base: Color = cols[0]
+	var acc: Color = cols[1]
+	var glow: Color = cols[2]
+	var img := _blank()
+	var n := _noise(seed, 0.2, 3)
+	var pts := _rand_pts(9, seed)
+	for y in S:
+		for x in S:
+			var i := y * S + x
+			var c := base.lerp(base.lightened(0.15), n[i])
+			# panel seams common to all suits
+			if x % 16 == 0 or y % 16 == 0:
+				c = base.darkened(0.35)
+			match pattern:
+				"stripes":
+					if (y >= 12 and y <= 15) or (y >= 18 and y <= 19):
+						c = acc
+					if x == 24 and y > 20:
+						c = glow
+				"nebula":
+					var neb := sin(x * 0.35 + n[i] * 5.0) * cos(y * 0.3 + n[i] * 4.0)
+					c = base.lerp(acc, clampf(neb * 0.5 + 0.35, 0.0, 0.8))
+					if _h(x, y, seed + 3) < 0.03:
+						c = Color(1, 1, 1)
+					elif _h(x, y, seed + 4) < 0.04:
+						c = glow
+				"ice":
+					var v := _voronoi(x, y, pts)
+					c = base.lerp(acc.lightened(0.4), clampf(1.0 - v.x / 9.0, 0.0, 1.0) * 0.5)
+					if v.y - v.x < 0.9:
+						c = acc
+					if posmod(x - y, 11) == 0 and _h(x, y, seed) < 0.5:
+						c = glow.lightened(0.4)
+				"magma":
+					var v2 := _voronoi(x, y, pts)
+					c = base.lerp(base.lightened(0.1), n[i])
+					if v2.y - v2.x < 1.0:
+						c = glow
+					elif v2.y - v2.x < 2.0:
+						c = acc
+				"vines":
+					var wave := sin(y * 0.45 + x * 0.12) * 4.0
+					var dx := absf(posmod(x + int(wave), 12) - 6.0)
+					if dx < 1.0:
+						c = acc
+					elif dx < 1.6 and _h(x, y, seed) < 0.4:
+						c = glow
+					if (x + y) % 9 == 0 and dx < 3.0:
+						c = glow.lightened(0.2)
+				"filigree":
+					var fx := absf(sin(x * TAU / 16.0) * 6.0 - (y % 16 - 8))
+					if fx < 0.8 or absf(cos(y * TAU / 16.0) * 6.0 - (x % 16 - 8)) < 0.8:
+						c = acc
+					if (x % 16 == 8 and y % 16 == 8):
+						c = glow
+			img.set_pixel(x, y, c)
+	return img
+
+
+## Mining crack overlay: dark fractures radiating from the centre on a transparent tile.
+static func make_crack(seed: int) -> Image:
+	var img := _blank()
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed
+	for k in 9:
+		var p := Vector2(15.5, 15.5) + Vector2(rng.randf_range(-3, 3), rng.randf_range(-3, 3))
+		var a := k * TAU / 9.0 + rng.randf_range(-0.3, 0.3)
+		var len := rng.randf_range(9, 18)
+		for s in int(len):
+			var q := p + Vector2.from_angle(a) * s
+			a += rng.randf_range(-0.35, 0.35)
+			var x := posmod(int(q.x), S)
+			var y := posmod(int(q.y), S)
+			img.set_pixel(x, y, Color(0.08, 0.06, 0.1, 0.85))
+			if s % 4 == 0:
+				img.set_pixel(posmod(x + 1, S), posmod(y + 1, S), Color(1, 1, 1, 0.25))
+	return img

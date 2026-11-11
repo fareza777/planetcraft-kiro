@@ -561,6 +561,21 @@ func _refresh_suit() -> void:
 	for c in _suit_box.get_children():
 		c.queue_free()
 	var st := player.stats
+	var top := HBoxContainer.new()
+	top.add_theme_constant_override("separation", 18)
+	_suit_box.add_child(top)
+	var sp := SuitPreview.new()
+	sp.custom_minimum_size = Vector2(220, 260)
+	sp.set_def(Game.equipped_def("suit"))
+	top.add_child(sp)
+	var tv := VBoxContainer.new()
+	top.add_child(tv)
+	tv.add_child(TF.label(Game.equipped_def("suit").get("name", ""), 24, TF.AMBER))
+	var sdesc := TF.label(Game.equipped_def("suit").get("desc", ""), 15, TF.DIM)
+	sdesc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	sdesc.custom_minimum_size.x = 420
+	tv.add_child(sdesc)
+	tv.add_child(TF.label("Change your look in the Stellar Store on the title screen.", 14, TF.DIM))
 	_suit_box.add_child(TF.label("EXOSUIT STATUS", 22, TF.CYAN))
 	for b in [["Health", st.hp, st.max_hp, Color(1, 0.33, 0.4)], ["Oxygen", st.o2, st.max_o2, TF.CYAN], ["Energy", st.energy, st.max_energy, Color(1, 0.82, 0.25)], ["Nutrition", st.food, 100.0, TF.GREEN], ["Radiation", st.rad, 100.0, Color(0.7, 1, 0.3)]]:
 		var row := HBoxContainer.new()

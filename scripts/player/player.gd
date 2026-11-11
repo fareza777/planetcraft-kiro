@@ -160,8 +160,33 @@ func UiAnim_hand_pop() -> void:
 	tw.tween_property(hand, "scale", Vector3.ONE, 0.22)
 
 
+## Suit sleeve + glove visible at the bottom right, wearing the equipped suit's fabric.
+func _build_sleeve() -> void:
+	var sd: Dictionary = Game.equipped_def("suit")
+	var cols: Array = Game.cosmetic("suit")
+	_sleeve = Node3D.new()
+	hand.add_child(_sleeve)
+	var arm := MeshInstance3D.new()
+	var am := BoxMesh.new()
+	am.size = Vector3(0.13, 0.13, 0.42)
+	arm.mesh = am
+	var mat := StandardMaterial3D.new()
+	mat.albedo_texture = SuitPreview.texture_for(sd)
+	mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
+	mat.uv1_scale = Vector3(0.6, 0.6, 0.6)
+	mat.roughness = 0.7
+	arm.material_override = mat
+	arm.position = Vector3(0.06, -0.1, 0.32)
+	arm.rotation = Vector3(0.18, 0.0, 0.05)
+	_sleeve.add_child(arm)
+	_sleeve.add_child(_box(Vector3(0.15, 0.06, 0.06), cols[1], Vector3(0.06, -0.08, 0.12)))
+	_sleeve.add_child(_box(Vector3(0.1, 0.11, 0.12), cols[1].darkened(0.25), Vector3(0.02, -0.06, 0.07)))
+	_sleeve.add_child(_box(Vector3(0.04, 0.012, 0.05), cols[2], Vector3(0.06, -0.027, 0.2), true))
+
+
 func _build_tool_model(root: Node3D) -> void:
 	var suit: Array = Game.cosmetic("suit")
+	_build_sleeve()
 	root.add_child(_box(Vector3(0.11, 0.11, 0.42), suit[0], Vector3.ZERO))
 	root.add_child(_box(Vector3(0.13, 0.05, 0.2), suit[1], Vector3(0, 0.07, 0.05)))
 	root.add_child(_box(Vector3(0.06, 0.06, 0.1), suit[2], Vector3(0, 0.0, -0.25), true))
@@ -171,17 +196,88 @@ func _build_tool_model(root: Node3D) -> void:
 		root.add_child(_box(Vector3(0.02, 0.02, 0.06), suit[1].darkened(0.3), Vector3(0.0, 0.0, -0.33 - k * 0.0) + Vector3(cos(k * 2.1) * 0.035, sin(k * 2.1) * 0.035, 0)))
 
 
+var _beam_glow: MeshInstance3D
+var _beam_glow_mat: StandardMaterial3D
+var _impact: MeshInstance3D
+var _impact_mat: StandardMaterial3D
+var _impact_t := 0.0
+var _jet_fx: CPUParticles3D
+var _sleeve: Node3D
+var _laser_style := "pulse"
+
+
 func _build_beam() -> void:
+	var laser: Dictionary = Game.equipped_def("laser")
+	_laser_style = laser.get("style", "pulse")
+	# bright core
 	beam = MeshInstance3D.new()
 	var bm := BoxMesh.new()
-	bm.size = Vector3(0.03, 0.03, 1.0)
+	bm.size = Vector3(0.018, 0.018, 1.0)
 	beam.mesh = bm
 	_beam_mat = StandardMaterial3D.new()
 	_beam_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	_beam_mat.albedo_color = Color(0.5, 0.95, 1.0)
+	_beam_mat.albedo_color = Color(1.4, 1.4, 1.4)
 	beam.material_override = _beam_mat
 	beam.visible = false
 	add_child(beam)
+	# coloured outer glow (child, so it follows the core)
+	_beam_glow = MeshInstance3D.new()
+	var gm := BoxMesh.new()
+	gm.size = Vector3(0.07, 0.07, 1.0)
+	_beam_glow.mesh = gm
+	_beam_glow_mat = StandardMaterial3D.new()
+	_beam_glow_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	_beam_glow_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	_beam_glow_mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	_beam_glow.material_override = _beam_glow_mat
+	beam.add_child(_beam_glow)
+	# impact flare at the hit point
+	_impact = MeshInstance3D.new()
+	var sm := SphereMesh.new()
+	sm.radius = 0.12
+	sm.height = 0.24
+	sm.radial_segments = 8
+	sm.rings = 4
+	_impact.mesh = sm
+	_impact_mat = StandardMaterial3D.new()
+	_impact_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	_impact_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	_impact_mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	_impact.material_override = _impact_mat
+	_impact.top_level = true
+	_impact.visible = false
+	add_child(_impact)
+	# jetpack trail in the suit's thruster colour
+	var trail := Color.html(Game.equipped_def("suit").get("trail", "#ffb02e"))
+	_jet_fx = CPUParticles3D.new()
+	_jet_fx.amount = 36
+	_jet_fx.lifetime = 0.5
+	_jet_fx.local_coords = false
+	_jet_fx.direction = Vector3.DOWN
+	_jet_fx.spread = 18.0
+	_jet_fx.initial_velocity_min = 3.0
+	_jet_fx.initial_velocity_max = 5.0
+	_jet_fx.gravity = Vector3.ZERO
+	_jet_fx.scale_amount_min = 0.6
+	_jet_fx.scale_amount_max = 1.2
+	var q := QuadMesh.new()
+	q.size = Vector2(0.16, 0.16)
+	var qm := StandardMaterial3D.new()
+	qm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	qm.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES
+	qm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	qm.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	qm.vertex_color_use_as_albedo = true
+	q.material = qm
+	_jet_fx.mesh = q
+	var grad := Gradient.new()
+	grad.set_color(0, Color(1, 1, 1, 0.9))
+	grad.add_point(0.25, Color(trail.r, trail.g, trail.b, 0.8))
+	grad.set_color(grad.get_point_count() - 1, Color(trail.r * 0.4, trail.g * 0.4, trail.b * 0.4, 0.0))
+	_jet_fx.color_ramp = grad
+	_jet_fx.position = Vector3(0, 0.9, 0.35)
+	_jet_fx.emitting = false
+	add_child(_jet_fx)
 
 
 func _box(size: Vector3, color: Color, pos: Vector3, glow := false, rot := Vector3.ZERO) -> MeshInstance3D:
@@ -228,7 +324,10 @@ func _build_target_meshes() -> void:
 	_crack_mat = StandardMaterial3D.new()
 	_crack_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	_crack_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	_crack_mat.albedo_color = Color(0, 0, 0, 0)
+	_crack_mat.albedo_color = Color(1, 1, 1, 0)
+	var tf = load("res://scripts/voxel/texture_factory.gd")
+	_crack_mat.albedo_texture = ImageTexture.create_from_image(tf.make_crack(7))
+	_crack_mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
 	crack.material_override = _crack_mat
 	crack.top_level = true
 	crack.visible = false
@@ -496,7 +595,8 @@ func _update_mining(dt: float) -> void:
 			fx.chips(Vector3(p) + Vector3(0.5, 0.5, 0.5) + Vector3(target.normal) * 0.52, Reg.block_color(id))
 	crack.visible = true
 	crack.global_position = Vector3(p) + Vector3(0.5, 0.5, 0.5)
-	_crack_mat.albedo_color = Color(0.0, 0.0, 0.0, clampf(mine_progress, 0.0, 1.0) * 0.55)
+	_crack_mat.albedo_color = Color(1, 1, 1, clampf(mine_progress * 1.3, 0.0, 0.9))
+	crack.scale = Vector3.ONE * (1.0 + sin(Time.get_ticks_msec() * 0.05) * 0.012 * mine_progress)
 	if mine_progress >= 1.0:
 		mine_progress = 0.0
 		if world.set_block(p.x, p.y, p.z, 0):
@@ -539,14 +639,40 @@ func _show_beam(p: Vector3i) -> void:
 
 
 func _beam_to(to: Vector3) -> void:
-	var from := hand.global_position + -cam.global_transform.basis.z * 0.3
+	# beam leaves the mining tool's emitter, not whatever item is in the hand
+	var from := _tool_root.global_position + -cam.global_transform.basis.z * 0.32
 	var mid := (from + to) * 0.5
 	var len := from.distance_to(to)
+	var t := Time.get_ticks_msec() / 1000.0
 	beam.visible = true
 	beam.global_position = mid
 	beam.look_at(to, Vector3.UP if absf((to - from).normalized().y) < 0.99 else Vector3.RIGHT)
-	beam.scale = Vector3(1.0 + randf() * 0.6, 1.0 + randf() * 0.6, len)
-	_beam_mat.albedo_color = (Game.cosmetic("laser")[0] as Color).lerp(Color(1, 1, 1), randf() * 0.35) * 1.3
+	var col: Color = Game.cosmetic("laser")[0]
+	var w := 1.0
+	match _laser_style:
+		"helix":
+			w = 1.0 + 0.5 * sin(t * 40.0)
+			beam.rotation.z = t * 12.0
+		"crackle":
+			w = 0.6 + randf() * 1.4
+		"void":
+			w = 1.5 + 0.3 * sin(t * 8.0)
+			col = col.darkened(0.2)
+		"solar":
+			w = 1.3 + 0.4 * sin(t * 25.0)
+		_:
+			w = 1.0 + randf() * 0.4
+	beam.scale = Vector3(w, w, len)
+	_beam_glow_mat.albedo_color = Color(col.r, col.g, col.b, 0.45 + 0.15 * sin(t * 30.0))
+	_impact.visible = true
+	_impact.global_position = to - (to - from).normalized() * 0.45
+	var pulse := 0.8 + 0.4 * sin(t * 35.0)
+	_impact.scale = Vector3.ONE * pulse * (1.6 if _laser_style == "void" else 1.0)
+	_impact_mat.albedo_color = Color(col.r, col.g, col.b, 0.75)
+	_impact_t -= get_process_delta_time()
+	if _impact_t <= 0.0 and fx != null:
+		_impact_t = 0.09
+		fx.sparks(_impact.global_position, col, 3)
 
 
 func _update_place(dt: float) -> void:
@@ -610,6 +736,14 @@ func swing() -> void:
 
 func _update_hand(dt: float) -> void:
 	_refresh_held()
+	# while mining with a non-weapon in hand, show the mining tool instead of the held item
+	var weapon: bool = selected_item().get("type", "") == "weapon"
+	var mining_now: bool = ctl.mine and not weapon
+	_tool_root.visible = mining_now or _held.get_child_count() == 0
+	_held.visible = not mining_now
+	if not beam.visible:
+		_impact.visible = false
+	_jet_fx.emitting = jet_active
 	_swing = maxf(0.0, _swing - dt * 4.0)
 	hand.rotation = Vector3(-sin(_swing * PI) * 0.9, sin(_swing * PI) * 0.5, 0)
 	var moving: bool = Vector2(vel.x, vel.z).length() > 0.5 and on_ground

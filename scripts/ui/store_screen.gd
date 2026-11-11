@@ -15,6 +15,7 @@ var _tabs := {}
 class Preview:
 	extends Control
 	var cat := ""
+	var style := ""
 	var cols: Array = []
 	var t := 0.0
 
@@ -38,13 +39,45 @@ class Preview:
 				draw_rect(Rect2(c + Vector2(-r * 0.75, -r * 0.55), Vector2(r * 1.5, r * 0.5)), g * (0.9 + 0.2 * sin(t * 3.0)))
 				draw_rect(Rect2(c + Vector2(-r, -r * 1.1), Vector2(r * 2, r * 0.15)), b)
 			"laser":
-				var x0 := s.x * 0.12
-				draw_rect(Rect2(Vector2(x0, c.y - 10), Vector2(s.x * 0.25, 20)), Color(0.25, 0.27, 0.34))
+				var x0 := s.x * 0.1
+				var x1 := s.x * 0.9
+				draw_rect(Rect2(Vector2(x0, c.y - 12), Vector2(s.x * 0.24, 24)), Color(0.25, 0.27, 0.34))
+				draw_rect(Rect2(Vector2(x0 + s.x * 0.2, c.y - 7), Vector2(10, 14)), a)
+				var start := Vector2(x0 + s.x * 0.24, c.y)
 				var flick := 0.8 + 0.2 * sin(t * 30.0)
-				draw_line(Vector2(x0 + s.x * 0.25, c.y), Vector2(s.x * 0.9, c.y + sin(t * 4.0) * 4.0), a * flick, 7.0, true)
-				draw_line(Vector2(x0 + s.x * 0.25, c.y), Vector2(s.x * 0.9, c.y + sin(t * 4.0) * 4.0), Color(1, 1, 1, 0.8), 2.0, true)
-				for k in 5:
-					var p := Vector2(s.x * 0.9, c.y) + Vector2.from_angle(t * 5.0 + k * 1.3) * (6.0 + k * 2.0)
+				draw_line(start, Vector2(x1, c.y), Color(a.r, a.g, a.b, 0.3), 16.0, true)
+				match style:
+					"helix":
+						var pts := PackedVector2Array()
+						var pts2 := PackedVector2Array()
+						for k in 40:
+							var f := k / 39.0
+							var x := lerpf(start.x, x1, f)
+							pts.append(Vector2(x, c.y + sin(f * 18.0 - t * 12.0) * 7.0))
+							pts2.append(Vector2(x, c.y - sin(f * 18.0 - t * 12.0) * 7.0))
+						draw_polyline(pts, a, 3.0, true)
+						draw_polyline(pts2, a.lightened(0.4), 3.0, true)
+					"crackle":
+						var p0 := start
+						for k in 10:
+							var p1 := Vector2(lerpf(start.x, x1, (k + 1) / 10.0), c.y + randf_range(-9, 9))
+							draw_line(p0, p1, a * flick, 3.0, true)
+							p0 = p1
+					"void":
+						draw_line(start, Vector2(x1, c.y), Color(0, 0, 0), 8.0, true)
+						for k in 6:
+							var f2 := fmod(t * 0.8 + k / 6.0, 1.0)
+							draw_arc(Vector2(lerpf(start.x, x1, f2), c.y), 8.0, 0, TAU, 16, a, 2.0, true)
+					"solar":
+						draw_line(start, Vector2(x1, c.y), a * flick, 9.0, true)
+						for k in 8:
+							var f3 := fmod(t * 1.5 + k / 8.0, 1.0)
+							draw_circle(Vector2(lerpf(start.x, x1, f3), c.y + sin(k * 2.0) * 6.0), 2.5, a.lightened(0.5))
+					_:
+						draw_line(start, Vector2(x1, c.y), a * flick, 7.0, true)
+				draw_line(start, Vector2(x1, c.y), Color(1, 1, 1, 0.85), 2.0, true)
+				for k in 6:
+					var p := Vector2(x1, c.y) + Vector2.from_angle(t * 5.0 + k * 1.1) * (6.0 + k * 2.0)
 					draw_circle(p, 2.5, a.lightened(0.4))
 			"rover":
 				var w := s.x * 0.62
@@ -139,12 +172,19 @@ func _card(it: Dictionary) -> Control:
 	pc.add_theme_stylebox_override("panel", TF.box(Color(0.05, 0.05, 0.12, 0.95), border, 14, 2, 12))
 	var v := VBoxContainer.new()
 	pc.add_child(v)
-	var pv := Preview.new()
-	pv.cat = it.cat
-	for c in it.colors:
-		pv.cols.append(Color.html(c))
-	pv.custom_minimum_size = Vector2(260, 110)
-	v.add_child(pv)
+	if it.cat == "suit":
+		var sp := SuitPreview.new()
+		sp.custom_minimum_size = Vector2(260, 220)
+		sp.set_def(it)
+		v.add_child(sp)
+	else:
+		var pv := Preview.new()
+		pv.cat = it.cat
+		pv.style = it.get("style", "")
+		for c in it.colors:
+			pv.cols.append(Color.html(c))
+		pv.custom_minimum_size = Vector2(260, 120)
+		v.add_child(pv)
 	v.add_child(TF.label(it.name, 20, TF.AMBER if legendary else TF.TEXT))
 	var d := TF.label(it.desc, 14, TF.DIM)
 	d.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART

@@ -140,6 +140,10 @@ func equipped(cat: String) -> String:
 	return String(profile.equipped.get(cat, cat + "_default"))
 
 
+func equipped_def(cat: String) -> Dictionary:
+	return Reg.store.get(equipped(cat), Reg.store.get(cat + "_default", {}))
+
+
 ## Colours of the equipped cosmetic for a category (suit / laser / rover / ship).
 func cosmetic(cat: String) -> Array:
 	var it: Dictionary = Reg.store.get(equipped(cat), Reg.store.get(cat + "_default", {}))

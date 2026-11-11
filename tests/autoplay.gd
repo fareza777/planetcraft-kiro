@@ -74,6 +74,10 @@ func _process(dt: float) -> void:
 				_next()
 		4:
 			p.ctl.mine = true
+			if t > 1.2 and not _mark.has("mine_shot"):
+				_mark["mine_shot"] = true
+				p.pitch = -0.6
+				shot("10_mining.png")
 			if t > 5.0:
 				p.ctl.mine = false
 				var gained := _total_items(p) - int(_mark.items)

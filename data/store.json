@@ -1,24 +1,337 @@
 [
-  {"id": "suit_default", "cat": "suit", "name": "Pioneer Orange", "price": 0, "colors": ["#3b4358", "#ffb02e", "#4fe3ff"], "desc": "Standard-issue colony exosuit."},
-  {"id": "suit_nebula", "cat": "suit", "name": "Nebula Drifter", "price": 25, "colors": ["#2a1550", "#c48aff", "#ff7af0"], "desc": "Violet plating with pulsing nebula trim."},
-  {"id": "suit_glacier", "cat": "suit", "name": "Glacier Warden", "price": 30, "colors": ["#c9d9ea", "#4f86a8", "#9ff3ff"], "desc": "White ceramic armour from the Kryos survey corps."},
-  {"id": "suit_ember", "cat": "suit", "name": "Ember Knight", "price": 40, "colors": ["#2a0806", "#ff6a1f", "#ffe48a"], "desc": "Forged in the calderas of Pyrrhos."},
-  {"id": "suit_verdant", "cat": "suit", "name": "Verdant Ranger", "price": 35, "colors": ["#14382a", "#2fa794", "#7affd4"], "desc": "Moss-green scout armour."},
-  {"id": "suit_precursor", "cat": "suit", "name": "Precursor Regalia", "price": 120, "colors": ["#1a1408", "#f5cd4f", "#c48aff"], "desc": "Gold and void-glass, copied from the ruins. Legendary."},
-  {"id": "laser_cyan", "cat": "laser", "name": "Cyan Beam", "price": 0, "colors": ["#4fe3ff"], "desc": "Default mining laser emitter."},
-  {"id": "laser_magenta", "cat": "laser", "name": "Plasma Pink", "price": 15, "colors": ["#ff3ad0"], "desc": "A hot magenta mining beam."},
-  {"id": "laser_gold", "cat": "laser", "name": "Solar Gold", "price": 20, "colors": ["#ffcf4a"], "desc": "Beam tuned to the colour of a G-type star."},
-  {"id": "laser_lime", "cat": "laser", "name": "Uranite Green", "price": 20, "colors": ["#b2ff4a"], "desc": "Radioactive-looking. Perfectly safe. Probably."},
-  {"id": "laser_void", "cat": "laser", "name": "Void Violet", "price": 45, "colors": ["#a65cff"], "desc": "Beam with a faint gravitational shimmer."},
-  {"id": "rover_default", "cat": "rover", "name": "Survey Amber", "price": 0, "colors": ["#3b4358", "#ffb02e", "#4fe3ff"], "desc": "Standard rover paint."},
-  {"id": "rover_desert", "cat": "rover", "name": "Dune Runner", "price": 20, "colors": ["#c98a3a", "#6e341d", "#fff4bd"], "desc": "Sand camouflage for Aridus."},
-  {"id": "rover_night", "cat": "rover", "name": "Night Prowler", "price": 30, "colors": ["#0f0f18", "#ff3ad0", "#ff3ad0"], "desc": "Matte black with neon trim."},
-  {"id": "rover_arctic", "cat": "rover", "name": "Arctic Hauler", "price": 25, "colors": ["#e6eef8", "#2c4a63", "#9ff3ff"], "desc": "White and steel blue."},
-  {"id": "ship_default", "cat": "ship", "name": "Colony Standard", "price": 0, "colors": ["#3b4358", "#e88a1f", "#4fe3ff"], "desc": "Standard livery."},
-  {"id": "ship_racer", "cat": "ship", "name": "Comet Racer", "price": 35, "colors": ["#e6eef8", "#ff3a4a", "#4fe3ff"], "desc": "Racing stripes for the fast lane."},
-  {"id": "ship_royal", "cat": "ship", "name": "Royal Envoy", "price": 60, "colors": ["#1a0533", "#f5cd4f", "#c48aff"], "desc": "Purple and gold diplomatic livery."},
-  {"id": "ship_stealth", "cat": "ship", "name": "Shadow Courier", "price": 45, "colors": ["#0d0d12", "#3a3a48", "#ff5ad0"], "desc": "Low-visibility coating."},
-  {"id": "kit_pioneer", "cat": "kit", "name": "Pioneer Supply Drop", "price": 18, "colors": ["#2fa794", "#ffb02e", "#ffffff"], "desc": "Every new expedition starts with extra power cells, O2, rations and a Plasma Pistol.", "items": [["power_cell", 4], ["o2_canister", 3], ["ration", 5], ["plasma_pistol", 1]]},
-  {"id": "kit_builder", "cat": "kit", "name": "Architect Crate", "price": 22, "colors": ["#5e6777", "#ffcf4a", "#ffffff"], "desc": "New expeditions start with a Fabricator, metal plating, glass and lamps.", "items": [["fabricator", 1], ["metal_plate", 32], ["glass", 16], ["lamp", 12]]},
-  {"id": "kit_tamer", "cat": "kit", "name": "Beast Whisperer", "price": 28, "colors": ["#145a40", "#4fd197", "#ffff9a"], "desc": "New expeditions start with 5 Bio Lures and a Med Kit.", "items": [["tame_lure", 5], ["medkit", 2]]}
+ {
+  "id": "suit_default",
+  "cat": "suit",
+  "name": "Pioneer Orange",
+  "price": 0,
+  "colors": [
+   "#3b4358",
+   "#ffb02e",
+   "#4fe3ff"
+  ],
+  "desc": "Colony-issue exosuit. Hazard stripes, gold-tinted visor and a whip antenna.",
+  "pattern": "stripes",
+  "helmet": "round",
+  "visor": "wide",
+  "acc": "antenna",
+  "trail": "#ffb02e"
+ },
+ {
+  "id": "suit_nebula",
+  "cat": "suit",
+  "name": "Nebula Drifter",
+  "price": 25,
+  "colors": [
+   "#1a0d3a",
+   "#8f4cf0",
+   "#ff7af0"
+  ],
+  "desc": "A living star-field woven into the fabric. Crystal crest fins shimmer as you move.",
+  "pattern": "nebula",
+  "helmet": "dome",
+  "visor": "full",
+  "acc": "fins",
+  "trail": "#ff7af0"
+ },
+ {
+  "id": "suit_glacier",
+  "cat": "suit",
+  "name": "Glacier Warden",
+  "price": 30,
+  "colors": [
+   "#d9e6f2",
+   "#4f86a8",
+   "#9ff3ff"
+  ],
+  "desc": "Faceted ice-ceramic plates, a T-visor and frost spikes on the shoulders.",
+  "pattern": "ice",
+  "helmet": "angular",
+  "visor": "t",
+  "acc": "spikes",
+  "trail": "#9ff3ff"
+ },
+ {
+  "id": "suit_ember",
+  "cat": "suit",
+  "name": "Ember Knight",
+  "price": 40,
+  "colors": [
+   "#1c0806",
+   "#a8300c",
+   "#ffb35a"
+  ],
+  "desc": "Obsidian armour with molten seams. Horned helm, ember-slit visor, flame thrusters.",
+  "pattern": "magma",
+  "helmet": "knight",
+  "visor": "slit",
+  "acc": "horns",
+  "trail": "#ff6a1f"
+ },
+ {
+  "id": "suit_verdant",
+  "cat": "suit",
+  "name": "Verdant Ranger",
+  "price": 35,
+  "colors": [
+   "#14382a",
+   "#2fa794",
+   "#c6ff7a"
+  ],
+  "desc": "Scout hood wrapped in bioluminescent vines grown on Verdania.",
+  "pattern": "vines",
+  "helmet": "hood",
+  "visor": "round",
+  "acc": "leaves",
+  "trail": "#7aff8a"
+ },
+ {
+  "id": "suit_precursor",
+  "cat": "suit",
+  "name": "Precursor Regalia",
+  "price": 120,
+  "colors": [
+   "#0e0b07",
+   "#f5cd4f",
+   "#c48aff"
+  ],
+  "desc": "Gold filigree over void-black plate, a floating halo and a single precursor eye. Legendary.",
+  "pattern": "filigree",
+  "helmet": "crown",
+  "visor": "eye",
+  "acc": "halo",
+  "trail": "#c48aff"
+ },
+ {
+  "id": "laser_cyan",
+  "cat": "laser",
+  "name": "Cyan Beam",
+  "price": 0,
+  "colors": [
+   "#4fe3ff"
+  ],
+  "desc": "Default mining laser emitter.",
+  "style": "pulse"
+ },
+ {
+  "id": "laser_magenta",
+  "cat": "laser",
+  "name": "Plasma Pink",
+  "price": 15,
+  "colors": [
+   "#ff3ad0"
+  ],
+  "desc": "A hot magenta mining beam.",
+  "style": "helix"
+ },
+ {
+  "id": "laser_gold",
+  "cat": "laser",
+  "name": "Solar Gold",
+  "price": 20,
+  "colors": [
+   "#ffcf4a"
+  ],
+  "desc": "Beam tuned to the colour of a G-type star.",
+  "style": "solar"
+ },
+ {
+  "id": "laser_lime",
+  "cat": "laser",
+  "name": "Uranite Green",
+  "price": 20,
+  "colors": [
+   "#b2ff4a"
+  ],
+  "desc": "Radioactive-looking. Perfectly safe. Probably.",
+  "style": "crackle"
+ },
+ {
+  "id": "laser_void",
+  "cat": "laser",
+  "name": "Void Violet",
+  "price": 45,
+  "colors": [
+   "#a65cff"
+  ],
+  "desc": "Beam with a faint gravitational shimmer.",
+  "style": "void"
+ },
+ {
+  "id": "rover_default",
+  "cat": "rover",
+  "name": "Survey Amber",
+  "price": 0,
+  "colors": [
+   "#3b4358",
+   "#ffb02e",
+   "#4fe3ff"
+  ],
+  "desc": "Standard rover paint."
+ },
+ {
+  "id": "rover_desert",
+  "cat": "rover",
+  "name": "Dune Runner",
+  "price": 20,
+  "colors": [
+   "#c98a3a",
+   "#6e341d",
+   "#fff4bd"
+  ],
+  "desc": "Sand camouflage for Aridus."
+ },
+ {
+  "id": "rover_night",
+  "cat": "rover",
+  "name": "Night Prowler",
+  "price": 30,
+  "colors": [
+   "#0f0f18",
+   "#ff3ad0",
+   "#ff3ad0"
+  ],
+  "desc": "Matte black with neon trim."
+ },
+ {
+  "id": "rover_arctic",
+  "cat": "rover",
+  "name": "Arctic Hauler",
+  "price": 25,
+  "colors": [
+   "#e6eef8",
+   "#2c4a63",
+   "#9ff3ff"
+  ],
+  "desc": "White and steel blue."
+ },
+ {
+  "id": "ship_default",
+  "cat": "ship",
+  "name": "Colony Standard",
+  "price": 0,
+  "colors": [
+   "#3b4358",
+   "#e88a1f",
+   "#4fe3ff"
+  ],
+  "desc": "Standard livery."
+ },
+ {
+  "id": "ship_racer",
+  "cat": "ship",
+  "name": "Comet Racer",
+  "price": 35,
+  "colors": [
+   "#e6eef8",
+   "#ff3a4a",
+   "#4fe3ff"
+  ],
+  "desc": "Racing stripes for the fast lane."
+ },
+ {
+  "id": "ship_royal",
+  "cat": "ship",
+  "name": "Royal Envoy",
+  "price": 60,
+  "colors": [
+   "#1a0533",
+   "#f5cd4f",
+   "#c48aff"
+  ],
+  "desc": "Purple and gold diplomatic livery."
+ },
+ {
+  "id": "ship_stealth",
+  "cat": "ship",
+  "name": "Shadow Courier",
+  "price": 45,
+  "colors": [
+   "#0d0d12",
+   "#3a3a48",
+   "#ff5ad0"
+  ],
+  "desc": "Low-visibility coating."
+ },
+ {
+  "id": "kit_pioneer",
+  "cat": "kit",
+  "name": "Pioneer Supply Drop",
+  "price": 18,
+  "colors": [
+   "#2fa794",
+   "#ffb02e",
+   "#ffffff"
+  ],
+  "desc": "Every new expedition starts with extra power cells, O2, rations and a Plasma Pistol.",
+  "items": [
+   [
+    "power_cell",
+    4
+   ],
+   [
+    "o2_canister",
+    3
+   ],
+   [
+    "ration",
+    5
+   ],
+   [
+    "plasma_pistol",
+    1
+   ]
+  ]
+ },
+ {
+  "id": "kit_builder",
+  "cat": "kit",
+  "name": "Architect Crate",
+  "price": 22,
+  "colors": [
+   "#5e6777",
+   "#ffcf4a",
+   "#ffffff"
+  ],
+  "desc": "New expeditions start with a Fabricator, metal plating, glass and lamps.",
+  "items": [
+   [
+    "fabricator",
+    1
+   ],
+   [
+    "metal_plate",
+    32
+   ],
+   [
+    "glass",
+    16
+   ],
+   [
+    "lamp",
+    12
+   ]
+  ]
+ },
+ {
+  "id": "kit_tamer",
+  "cat": "kit",
+  "name": "Beast Whisperer",
+  "price": 28,
+  "colors": [
+   "#145a40",
+   "#4fd197",
+   "#ffff9a"
+  ],
+  "desc": "New expeditions start with 5 Bio Lures and a Med Kit.",
+  "items": [
+   [
+    "tame_lure",
+    5
+   ],
+   [
+    "medkit",
+    2
+   ]
+  ]
+ }
 ]
