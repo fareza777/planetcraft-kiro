@@ -34,3 +34,13 @@ systems (terraforming, colony automation, events, store). Tested as described in
 6. Flowing water and lava.
 7. Balancing pass from playtest telemetry collected locally (opt-in, offline).
 8. Release-signed builds and a Play Store listing.
+
+## Decided: no ads in the hackathon build
+The Kiroween build stays fully offline (no ads SDK, no network permissions), as required by
+`.kiro/steering/product.md`. Monetisation is planned only for a **separate Play Store build
+after the hackathon**:
+- AdMob banner placed clear of the Android navigation bar, interstitials only after a planet jump
+  or a death, opt-in rewarded ads (for example bonus Stellar Shards)
+- A "Remove Ads" in-app purchase (USD 4.99) through Google Play Billing
+- Required work: Gradle build, AdMob and Play Billing plugins, INTERNET/AD_ID permissions,
+  UMP consent dialog, privacy policy, and the publisher's own AdMob and Play Console IDs
