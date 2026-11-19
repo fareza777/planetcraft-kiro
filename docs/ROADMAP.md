@@ -23,6 +23,11 @@ systems (terraforming, colony automation, events, store). Tested as described in
 - **Water** does not flow; it is generated as a static sea level.
 - **Audio** is synthesised: functional and original, but simple compared to recorded sound design.
 - The release APK is **debug-signed**.
+- **Intro voice-over** is a generated neural-TTS placeholder, not a licensed studio recording.
+- **Ad IDs** ship as Google test values; the Remove Ads Product ID exists in code but not yet in
+  Play Console, so a sideloaded build cannot complete a real purchase.
+- **Intro footage** is real captured gameplay, so the in-game HUD is visible in the montage.
+- **Onboarding** was screenshot-tested on desktop; a fresh-install device capture is still pending.
 - Tested on one physical device (Redmi Note 11 / Snapdragon 680). Performance on other GPUs is unknown.
 
 ## Next steps (planned, not implemented)
@@ -35,12 +40,29 @@ systems (terraforming, colony automation, events, store). Tested as described in
 7. Balancing pass from playtest telemetry collected locally (opt-in, offline).
 8. Release-signed builds and a Play Store listing.
 
-## Decided: no ads in the hackathon build
-The Kiroween build stays fully offline (no ads SDK, no network permissions), as required by
-`.kiro/steering/product.md`. Monetisation is planned only for a **separate Play Store build
-after the hackathon**:
-- AdMob banner placed clear of the Android navigation bar, interstitials only after a planet jump
-  or a death, opt-in rewarded ads (for example bonus Stellar Shards)
-- A "Remove Ads" in-app purchase (USD 4.99) through Google Play Billing
-- Required work: Gradle build, AdMob and Play Billing plugins, INTERNET/AD_ID permissions,
-  UMP consent dialog, privacy policy, and the publisher's own AdMob and Play Console IDs
+## Store build: implemented in v0.2.0
+The main branch now carries the Play Store shell requested after the hackathon. The Kiroween v0.1.2
+APK remains the offline build.
+
+Implemented and exercised on the reference phone (with Google test ad IDs):
+- Cinematic title intro with English voice-over and captions, followed by the F7 Developer brand
+  ident; tap/key skips the current clip.
+- First-run three-page Field Guide, skippable, stored in the profile; also reopenable from the menu.
+- AdMob banner on the title screen only, bottom-right and 56 dp clear of bottom/side navigation
+  bars, hidden in overlays and gameplay.
+- Interstitials after a planet jump or respawn (60 s warm-up, 120 s gap, max 2 per session).
+- Opt-in rewarded ad in the Stellar Store: +25 Stellar Shards; the test ad completed and the
+  balance updated on device.
+- Google UMP consent before SDK initialisation; Privacy options in Settings/About.
+- Remove Ads: one-time Google Play product `remove_ads`, USD 4.99 list, persisted entitlement,
+  restore path, graceful failure when the Play Console product does not exist.
+
+Still required before publishing:
+- Replace the AdMob app id and the three ad unit ids in `project.godot` (currently Google test IDs).
+- Create and activate the `remove_ads` in-app product (USD 4.99) in Play Console, run a license-test
+  purchase and a restore, and verify refund/revocation.
+- Configure the UMP GDPR message, add a privacy policy URL, and test the EEA consent flow.
+- Test banner placement with visible 3-button navigation bars and exercise the interstitial display
+  path after a planet jump.
+- Replace the placeholder neural-TTS voice-over with a licensed recording (see ASSETS.md).
+- Release signing and an AAB for the Play track.

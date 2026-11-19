@@ -1,86 +1,145 @@
 class_name Intro
 extends CanvasLayer
-## Animated studio splash shown after the boot splash: icon pop, light sweep, title reveal,
-## "F7 DEVELOPER presents". Tap anywhere to skip. Emits `finished`.
+## Splash chain: the PlanetCraft cinematic title (English voice-over), then the F7 Developer
+## ident. Tap or any key skips the current clip. Emits `finished` when the chain is over.
 
 signal finished
 
 const TF := preload("res://scripts/ui/theme_factory.gd")
+const BG := Color(0.027, 0.024, 0.047, 1.0)  # #07060C, matches the F7 ident end frame
+const CLIPS := [
+	"res://art/intro/intro.ogv",
+	"res://art/intro/f7_brand.ogv",
+]
+const LOCKOUT := 0.7
 
 var _root: Control
-var _icon: TextureRect
-var _title: Label
-var _studio: Label
-var _sweep: ColorRect
+var _player: VideoStreamPlayer
+var _fade: ColorRect
+var _hint: Label
+var _streams: Array = []
+var _index := -1
 var _done := false
+var _started := 0
+var _safety: Timer
 
 
 func _ready() -> void:
-	layer = 50
+	layer = 60
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	_root = Control.new()
 	_root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_root.mouse_filter = Control.MOUSE_FILTER_STOP
-	_root.gui_input.connect(_on_input)
 	add_child(_root)
 	var bg := ColorRect.new()
-	bg.color = Color(0.03, 0.02, 0.07, 1.0)
+	bg.color = BG
 	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_root.add_child(bg)
-	var center := CenterContainer.new()
-	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_root.add_child(center)
-	var v := VBoxContainer.new()
-	v.alignment = BoxContainer.ALIGNMENT_CENTER
-	v.add_theme_constant_override("separation", 14)
-	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	center.add_child(v)
-	_studio = TF.label("F 7   D E V E L O P E R   P R E S E N T S", 18, TF.DIM)
-	_studio.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	v.add_child(_studio)
-	_icon = TextureRect.new()
-	_icon.texture = load("res://art/generated/icon_512.png")
-	_icon.custom_minimum_size = Vector2(240, 240)
-	_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	_icon.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	v.add_child(_icon)
-	_title = TF.label("PLANETCRAFT", 64, TF.CYAN)
-	_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	v.add_child(_title)
-	_sweep = ColorRect.new()
-	_sweep.color = Color(1, 1, 1, 0.12)
-	_sweep.size = Vector2(60, 2000)
-	_sweep.rotation = 0.35
-	_sweep.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_root.add_child(_sweep)
-	_studio.modulate.a = 0.0
-	_icon.modulate.a = 0.0
-	_title.modulate.a = 0.0
-	await get_tree().process_frame
-	_icon.pivot_offset = _icon.size * 0.5
-	_icon.scale = Vector2.ONE * 0.4
-	var tw := create_tween()
-	tw.tween_property(_studio, "modulate:a", 1.0, 0.4)
-	tw.parallel().tween_property(_icon, "modulate:a", 1.0, 0.35).set_delay(0.15)
-	tw.parallel().tween_property(_icon, "scale", Vector2.ONE, 0.6).set_delay(0.15).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	tw.parallel().tween_property(_icon, "rotation", 0.0, 0.6).from(-0.3).set_delay(0.15).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	tw.tween_property(_title, "modulate:a", 1.0, 0.35)
-	tw.parallel().tween_property(_sweep, "position:x", _root.size.x + 200.0, 0.7).from(-300.0)
-	tw.tween_interval(0.9)
-	tw.tween_property(_root, "modulate:a", 0.0, 0.45)
-	tw.tween_callback(_finish)
+	var aspect := AspectRatioContainer.new()
+	aspect.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	aspect.ratio = 16.0 / 9.0
+	aspect.stretch_mode = AspectRatioContainer.STRETCH_FIT
+	aspect.alignment_horizontal = AspectRatioContainer.ALIGNMENT_CENTER
+	aspect.alignment_vertical = AspectRatioContainer.ALIGNMENT_CENTER
+	aspect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_root.add_child(aspect)
+	_player = VideoStreamPlayer.new()
+	_player.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_player.expand = true
+	_player.loop = false
+	_player.autoplay = false
+	_player.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_player.finished.connect(_next_clip)
+	aspect.add_child(_player)
+	_hint = TF.label("TAP TO SKIP", 17, Color(1, 1, 1, 0.75))
+	_hint.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
+	_hint.position = Vector2(-190, -48)
+	_hint.modulate.a = 0.0
+	_root.add_child(_hint)
+	_safety = Timer.new()
+	_safety.one_shot = true
+	_safety.timeout.connect(_next_clip)
+	add_child(_safety)
+	_fade = ColorRect.new()
+	_fade.color = Color(0, 0, 0, 1)
+	_fade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_fade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_root.add_child(_fade)
+	for path in CLIPS:
+		var s := load(path)
+		if s is VideoStream:
+			_streams.append(s)
+	if _streams.is_empty():
+		_done = true
+		finished.emit.call_deferred()
+		return
+	_started = Time.get_ticks_msec() / 1000.0
+	_play(0)
+	var tw := _fade.create_tween()
+	tw.tween_property(_fade, "color:a", 0.0, 0.6)
+	var hw := _hint.create_tween()
+	hw.tween_interval(1.6)
+	hw.tween_property(_hint, "modulate:a", 1.0, 0.4)
 
 
-func _on_input(e: InputEvent) -> void:
-	if (e is InputEventMouseButton and e.pressed) or (e is InputEventScreenTouch and e.pressed):
-		_finish()
+func _play(i: int) -> void:
+	_index = i
+	_player.stream = _streams[i]
+	_player.play()
+	_safety.start(30.0 if i == 0 else 8.0)
 
 
-func _finish() -> void:
+func current_clip() -> int:
+	return _index
+
+
+func skip_current() -> void:
+	if _done:
+		return
+	_player.stop()
+	_next_clip()
+
+
+func skip_all() -> void:
+	if _done:
+		return
+	_player.stop()
+	_end()
+
+
+func _next_clip() -> void:
+	if _done:
+		return
+	if _index + 1 < _streams.size():
+		_play(_index + 1)
+		var hw := _hint.create_tween()
+		hw.tween_property(_hint, "modulate:a", 0.0, 0.3)
+		hw.tween_interval(0.8)
+		hw.tween_property(_hint, "modulate:a", 0.9, 0.3)
+	else:
+		_end()
+
+
+func _end() -> void:
 	if _done:
 		return
 	_done = true
-	finished.emit()
-	queue_free()
+	_safety.stop()
+	_hint.visible = false
+	var tw := _fade.create_tween()
+	tw.tween_property(_fade, "color:a", 1.0, 0.5)
+	tw.tween_callback(func() -> void:
+		finished.emit()
+		queue_free())
+
+
+func _input(e: InputEvent) -> void:
+	var now := Time.get_ticks_msec() / 1000.0
+	if now - _started < LOCKOUT:
+		return
+	var tapped: bool = (e is InputEventMouseButton and e.pressed) or (e is InputEventScreenTouch and e.pressed)
+	var keyed: bool = e is InputEventKey and e.pressed and not e.echo
+	if tapped or keyed:
+		get_viewport().set_input_as_handled()
+		skip_current()

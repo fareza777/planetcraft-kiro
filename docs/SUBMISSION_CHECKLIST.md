@@ -1,3 +1,7 @@
+> **Scope note (Nov 2026):** this document describes the v0.1.2 Kiroween/offline build. The
+> current main branch adds the store shell (cinematic intro, onboarding, AdMob, Remove Ads); see
+> [ROADMAP.md](ROADMAP.md) and [BUILDING.md](BUILDING.md).
+
 # Kiroween 2026 submission checklist (Frankenstein category)
 
 **Rules source:** the official page https://kiroween.devpost.com/rules returned HTTP 403 to every

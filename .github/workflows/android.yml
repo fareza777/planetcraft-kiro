@@ -16,7 +16,7 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
 
@@ -66,13 +66,33 @@ jobs:
           EOF
           done
 
+      - name: Install Android Gradle build template
+        run: |
+          set -e
+          TEMPLATES="$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
+          mkdir -p android/build
+          unzip -q "$TEMPLATES/android_source.zip" -d android/build
+          printf '%s.stable\n' "$GODOT_VERSION" > android/.build_version
+          touch android/build/.gdignore
+
+      - name: Fetch AdMob Android binaries (test IDs build)
+        run: |
+          set -e
+          curl -fsSL -o /tmp/admob-template.zip \
+            "https://github.com/poingstudios/godot-admob-plugin/releases/download/v5.1.0/android-template-v4.7.2.zip"
+          mkdir -p addons/admob/android/bin
+          unzip -q /tmp/admob-template.zip 'package.gd' 'ads/*' -d addons/admob/android/bin
+          test -f addons/admob/android/bin/package.gd
+          test -f addons/admob/android/bin/ads/libs/poing-godot-admob-ads-release.aar
+          test -f addons/GodotGooglePlayBilling/bin/release/GodotGooglePlayBilling-release.aar
+
       - name: Import project
         run: ./godot --headless --path . --import || true
 
       - name: Headless tests
         run: ./godot --headless --path . res://tests/test_scene.tscn
 
-      - name: Export debug APK
+      - name: Export Gradle debug APK (AdMob + Play Billing)
         run: |
           mkdir -p build
           ./godot --headless --path . --export-debug "Android" build/PlanetCraft-debug.apk

@@ -1,3 +1,7 @@
+> **Scope note (Nov 2026):** this document describes the v0.1.2 Kiroween/offline build. The
+> current main branch adds the store shell (cinematic intro, onboarding, AdMob, Remove Ads); see
+> [ROADMAP.md](ROADMAP.md) and [BUILDING.md](BUILDING.md).
+
 # How PlanetCraft was built with Kiro
 
 PlanetCraft was built from an empty folder in **Kiro CLI** sessions on November 9, 2026. This file

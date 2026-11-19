@@ -73,4 +73,4 @@ atmosphere the planet becomes breathable.
 Title screen → STELLAR STORE. Spend Stellar Shards on suit colours, laser colours, rover and ship
 paint and starter kits that apply to new expeditions. Shards are rare: elites, bosses, precursor
 relics, obelisk trials and starfalls. You can also refine a Crown of the Void or a Precursor Relic
-into shards. Everything is offline and permanent.
+into shards. Stellar Store purchases are offline and permanent.

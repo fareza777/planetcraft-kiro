@@ -6,8 +6,8 @@ config_version=5
 [application]
 
 config/name="PlanetCraft: Galactic Survival"
-config/description="Offline voxel sandbox: survive, build, automate and terraform alien worlds."
-config/version="0.1.2"
+config/description="Voxel sandbox: survive, build, automate and terraform alien worlds."
+config/version="0.2.0"
 run/main_scene="res://scenes/main.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 config/icon="res://art/generated/icon_512.png"
@@ -18,10 +18,17 @@ boot_splash/fullsize=false
 boot_splash/use_filter=true
 config/windows_native_icon=""
 
+[admob]
+
+general/android/app_id="ca-app-pub-3940256099942544~3347511713"
+general/android/enabled=true
+
 [autoload]
 
 Reg="*res://scripts/autoload/registry.gd"
 Game="*res://scripts/autoload/game.gd"
+Iap="*res://scripts/autoload/iap.gd"
+Ads="*res://scripts/autoload/ads.gd"
 
 [display]
 
@@ -32,6 +39,10 @@ window/stretch/aspect="expand"
 window/handheld/orientation=4
 window/vsync/vsync_mode=1
 
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/admob/plugin.cfg", "res://addons/GodotGooglePlayBilling/plugin.cfg")
+
 [input_devices]
 
 pointing/emulate_touch_from_mouse=false
@@ -40,6 +51,12 @@ pointing/emulate_mouse_from_touch=true
 [physics]
 
 common/physics_ticks_per_second=30
+
+[planetcraft]
+
+ads/banner_unit="ca-app-pub-3940256099942544/9214589741"
+ads/interstitial_unit="ca-app-pub-3940256099942544/1033173712"
+ads/rewarded_unit="ca-app-pub-3940256099942544/5224354917"
 
 [rendering]
 

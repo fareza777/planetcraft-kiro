@@ -10,6 +10,7 @@ var _cat := "suit"
 var _grid: GridContainer
 var _balance: Label
 var _tabs := {}
+var _reward_msg: Label
 
 
 class Preview:
@@ -119,6 +120,21 @@ func _ready() -> void:
 	var how := TF.label("Shards drop rarely: elite (★) monsters, bosses, precursor relics, obelisk trials and starfalls. Purchases are offline, permanent and shared by every expedition.", 15, TF.DIM)
 	how.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	add_child(how)
+	if Ads.available and not Game.remove_ads():
+		var adrow := HBoxContainer.new()
+		adrow.add_theme_constant_override("separation", 12)
+		add_child(adrow)
+		var adbtn := TF.button("WATCH AD · +%d SHARDS" % Ads.REWARD_SHARDS, _reward, 340)
+		adbtn.custom_minimum_size.y = 50
+		adbtn.add_theme_stylebox_override("normal", TF.box(Color(0.16, 0.3, 0.16, 0.95), TF.GREEN, 10, 2, 14))
+		adbtn.add_theme_stylebox_override("hover", TF.box(Color(0.2, 0.4, 0.2, 0.95), TF.GREEN, 10, 2, 14))
+		adrow.add_child(adbtn)
+		_reward_msg = TF.label("Optional rewarded ad. It helps keep the game free.", 15, TF.DIM)
+		_reward_msg.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_reward_msg.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		adrow.add_child(_reward_msg)
+		Ads.rewarded_granted.connect(_on_rewarded)
+		Ads.rewarded_failed.connect(_on_reward_failed)
 	var tabs := HBoxContainer.new()
 	add_child(tabs)
 	for c in CATS:
@@ -214,3 +230,21 @@ func _buy(id: String) -> void:
 func _equip(id: String) -> void:
 	Game.equip(id)
 	_refresh()
+
+
+func _reward() -> void:
+	if Ads.show_rewarded() and _reward_msg != null:
+		_reward_msg.text = "The reward is credited when the ad finishes."
+
+
+func _on_rewarded(n: int) -> void:
+	_refresh()
+	if _reward_msg != null and is_instance_valid(_reward_msg):
+		_reward_msg.text = "+%d Stellar Shards. Thank you." % n
+		_reward_msg.add_theme_color_override("font_color", TF.GREEN)
+
+
+func _on_reward_failed(reason: String) -> void:
+	if _reward_msg != null and is_instance_valid(_reward_msg):
+		_reward_msg.text = reason
+		_reward_msg.add_theme_color_override("font_color", TF.AMBER)

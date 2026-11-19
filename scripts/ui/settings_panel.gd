@@ -47,6 +47,36 @@ func _ready() -> void:
 	_section("AUDIO", Color(0.77, 0.54, 1.0))
 	_slider("master_volume", "Master volume", 0.0, 1.0, 0.05, func(v: float) -> String: return "%d%%" % int(round(v * 100)))
 	_slider("ambience", "Music & ambience", 0.0, 1.0, 0.05, func(v: float) -> String: return "%d%%" % int(round(v * 100)))
+	if Iap.available:
+		_section("PURCHASES", TF.GREEN)
+		var pur := HBoxContainer.new()
+		pur.add_child(_label("Remove Ads"))
+		var st := TF.label("Purchased · ads are off" if Game.remove_ads() else "One-time · %s" % Iap.price, 17, TF.GREEN if Game.remove_ads() else TF.DIM)
+		st.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		pur.add_child(st)
+		if not Game.remove_ads():
+			pur.add_child(TF.button("Buy · %s" % Iap.price, func() -> void: Iap.buy(), 190))
+			pur.add_child(TF.button("Restore", func() -> void: Iap.restore(), 150))
+		add_child(pur)
+		var pst := TF.label(Iap.status, 14, TF.DIM)
+		pst.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		add_child(pst)
+		Iap.state_changed.connect(func() -> void:
+			if is_instance_valid(pst):
+				pst.text = Iap.status
+			if is_instance_valid(st):
+				st.text = "Purchased · ads are off" if Game.remove_ads() else "One-time · %s" % Iap.price
+				st.add_theme_color_override("font_color", TF.GREEN if Game.remove_ads() else TF.DIM))
+	if Ads.available:
+		_section("PRIVACY", TF.AMBER)
+		var ar := HBoxContainer.new()
+		ar.add_child(_label("Ad privacy"))
+		var al := TF.label("Google AdMob serves the ads. You can change your consent choices here.", 16, TF.DIM)
+		al.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		al.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		ar.add_child(al)
+		ar.add_child(TF.button("Privacy options", func() -> void: Ads.privacy_options(), 230))
+		add_child(ar)
 	_section("DATA", TF.RED)
 	var dr := HBoxContainer.new()
 	dr.add_child(_label("Storage"))

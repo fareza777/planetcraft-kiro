@@ -60,6 +60,10 @@ var _ticker: Label
 var _ticker_i := 0
 var _ticker_t := 0.0
 var _t := 0.0
+var guide: Onboarding
+var _remove_btn: Button
+var _purchase_status: Label
+var _buy_btn: Button
 
 
 func _ready() -> void:
@@ -137,6 +141,10 @@ func _build_ui() -> void:
 		_menu.add_child(_save_card())
 	_menu.add_child(_menu_button("NEW EXPEDITION", "Generate a new star system from a seed", _show_new, TF.CYAN))
 	_menu.add_child(_menu_button("STELLAR STORE", "%d shards · suits, lasers, rovers, ships, kits" % int(Game.profile.shards), _show_store, Color(1.0, 0.75, 0.2)))
+	if Iap.available and not Game.remove_ads():
+		_remove_btn = _menu_button("REMOVE ADS", "One-time · %s · no banners or interstitials" % Iap.price, _show_remove_ads, TF.GREEN)
+		_menu.add_child(_remove_btn)
+	_menu.add_child(_menu_button("FIELD GUIDE", "Controls, survival and progression", _show_guide, TF.AMBER))
 	_menu.add_child(_menu_button("SETTINGS", "Graphics, controls, audio", _show_settings, TF.CYAN))
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
@@ -170,6 +178,70 @@ func _build_ui() -> void:
 		tw.tween_property(c, "modulate:a", 1.0, 0.35).set_delay(0.25 + i * 0.08)
 		i += 1
 	_next_ticker()
+	Iap.start()
+	Ads.start()
+	Iap.state_changed.connect(_refresh_purchase_ui)
+	Iap.purchased.connect(_on_ads_removed)
+	Iap.failed.connect(_on_purchase_failed)
+	var guiding := _maybe_onboard()
+	if not guiding:
+		Ads.show_banner()
+
+
+func _maybe_onboard() -> bool:
+	var args := OS.get_cmdline_user_args()
+	var forced := args.has("onboardtest")
+	if not forced:
+		if Game.is_onboarded():
+			return false
+		for a in args:
+			if a in ["menutest", "autotest", "creaturetest", "splashtest"]:
+				return false
+	_show_guide()
+	return true
+
+
+func _show_guide() -> void:
+	Ads.hide_banner()
+	var ob := Onboarding.new()
+	guide = ob
+	ob.closed.connect(func(start_expedition: bool) -> void:
+		guide = null
+		if start_expedition:
+			_show_new()
+		else:
+			Ads.show_banner())
+	_root.add_child(ob)
+
+
+func _refresh_purchase_ui() -> void:
+	if _remove_btn != null and is_instance_valid(_remove_btn):
+		_remove_btn.text = "   REMOVE ADS\n   One-time · %s · no banners or interstitials" % Iap.price
+	if _buy_btn != null and is_instance_valid(_buy_btn):
+		_buy_btn.text = "BUY · %s" % Iap.price
+	if _purchase_status != null and is_instance_valid(_purchase_status):
+		_purchase_status.text = Iap.status if Iap.status != "" else "Purchases are processed by Google Play."
+
+
+func _on_purchase_failed(reason: String) -> void:
+	if _purchase_status != null and is_instance_valid(_purchase_status):
+		_purchase_status.text = reason
+		_purchase_status.add_theme_color_override("font_color", TF.AMBER)
+	elif _ticker != null:
+		_ticker.text = reason
+		_ticker.modulate.a = 1.0
+
+
+func _on_ads_removed() -> void:
+	if _remove_btn != null and is_instance_valid(_remove_btn):
+		_remove_btn.queue_free()
+		_remove_btn = null
+	if _purchase_status != null and is_instance_valid(_purchase_status):
+		_purchase_status.text = "Remove Ads is active. Thank you."
+		_purchase_status.add_theme_color_override("font_color", TF.GREEN)
+	if _ticker != null:
+		_ticker.text = "Ads removed. Thank you!"
+		_ticker.modulate.a = 1.0
 
 
 func _menu_button(text: String, hint: String, cb: Callable, accent: Color) -> Button:
@@ -254,6 +326,7 @@ func _build_overlay() -> void:
 
 
 func _open_overlay(title: String) -> void:
+	Ads.hide_banner()
 	for c in _overlay_body.get_children():
 		c.queue_free()
 	(_overlay.find_child("Title", true, false) as Label).text = title
@@ -265,6 +338,8 @@ func _open_overlay(title: String) -> void:
 
 func _hide_overlay() -> void:
 	_overlay.visible = false
+	if guide == null:
+		Ads.show_banner()
 
 
 func _show_new() -> void:
@@ -321,6 +396,31 @@ func _show_settings() -> void:
 	_overlay_body.add_child(sp)
 
 
+func _show_remove_ads() -> void:
+	await _open_overlay("REMOVE ADS")
+	var l := TF.label("One-time purchase. Removes the menu banner and planet-jump interstitials, and disables the opt-in rewarded-ad prompt.", 19, TF.TEXT)
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_overlay_body.add_child(l)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 14)
+	_overlay_body.add_child(row)
+	_buy_btn = TF.button("BUY · %s" % Iap.price, func() -> void: Iap.buy(), 300)
+	_buy_btn.custom_minimum_size.y = 66
+	_buy_btn.add_theme_font_size_override("font_size", 24)
+	_buy_btn.add_theme_stylebox_override("normal", TF.box(Color(0.12, 0.38, 0.32, 0.95), TF.GREEN, 14, 2, 18))
+	_buy_btn.add_theme_stylebox_override("hover", TF.box(Color(0.16, 0.48, 0.4, 0.95), TF.GREEN, 14, 2, 18))
+	row.add_child(_buy_btn)
+	var restore := TF.button("RESTORE PURCHASE", func() -> void: Iap.restore(), 260)
+	restore.custom_minimum_size.y = 66
+	row.add_child(restore)
+	_purchase_status = TF.label(Iap.status if Iap.status != "" else "Purchases are processed by Google Play.", 16, TF.DIM)
+	_purchase_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_overlay_body.add_child(_purchase_status)
+	var note := TF.label("The price is set in Google Play (USD 4.99 list). The store shows your local price. The purchase is tied to your Google account and can be restored after reinstalling.", 15, TF.DIM)
+	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_overlay_body.add_child(note)
+
+
 func _apply_settings() -> void:
 	Game.apply_render_scale()
 	Game.apply_audio()
@@ -361,9 +461,18 @@ func _show_about() -> void:
 	links.add_child(TF.button("Licenses", func() -> void: Platform.open_url(Platform.REPO_URL + "/blob/main/THIRD_PARTY_NOTICES.md"), 150))
 	var stats := TF.label("Lifetime Stellar Shards found: %d" % int(Game.profile.get("lifetime", 0)), 16, TF.AMBER)
 	_overlay_body.add_child(stats)
-	var privacy := TF.label("Privacy: the game collects no personal data. Saves, settings and purchases stay on this device. Rate, Share, Source code and Licenses open other apps only when you tap them.", 15, TF.DIM)
+	var privacy := TF.label("Privacy: saves and settings stay on this device. The Android build shows Google AdMob banner, interstitial and opt-in rewarded ads; Google may process device and ad data under its own policies, and a consent form appears where required. Remove Ads is a one-time Google Play purchase that turns ads off. Rate, Share, Source code and Licenses open other apps only when you tap them.", 15, TF.DIM)
 	privacy.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_overlay_body.add_child(privacy)
+	if Ads.available or Iap.available:
+		var prow := HBoxContainer.new()
+		_overlay_body.add_child(prow)
+		if Ads.available:
+			prow.add_child(TF.button("Ad privacy options", func() -> void: Ads.privacy_options(), 250))
+		if Iap.available and not Game.remove_ads():
+			prow.add_child(TF.button("Remove ads · %s" % Iap.price, _show_remove_ads, 230))
+		elif Game.remove_ads():
+			prow.add_child(TF.label("Ads removed · thank you", 17, TF.GREEN))
 	var txt := """PlanetCraft: Galactic Survival is an original offline voxel sandbox by F7 Developer.
 
 Survive on alien worlds, mine and build, automate a colony, tame creatures, fly between six worlds and terraform dead planets into living ones.
@@ -388,8 +497,13 @@ func _on_new() -> void:
 
 
 func _go(new_game: bool) -> void:
+	Ads.hide_banner()
 	world.shutdown()
 	start_game.emit(new_game)
+
+
+func _exit_tree() -> void:
+	Ads.hide_banner()
 
 
 func _next_ticker() -> void:

@@ -24,6 +24,13 @@ func _ready() -> void:
 		show_menu()
 		_menu_shots()
 		return
+	if args.has("onboardtest"):
+		show_menu()
+		_onboard_shots()
+		return
+	if args.has("splashtest"):
+		_splash_shots()
+		return
 	if not args.has("autotest") and not args.has("creaturetest"):
 		var intro := Intro.new()
 		add_child(intro)
@@ -76,6 +83,8 @@ func _on_travel(_pid: String) -> void:
 	_end_session()
 	Game.load_meta()
 	_start("arrive")
+	await get_tree().create_timer(2.0).timeout
+	Ads.maybe_interstitial("travel")
 
 
 func _menu_shots() -> void:
@@ -96,6 +105,42 @@ func _menu_shots() -> void:
 	get_viewport().get_texture().get_image().save_png(dir + "menu_04_store.png")
 	print("[MENUTEST] done")
 	get_tree().quit()
+
+
+func _shot(name: String) -> void:
+	var dir := "user://" if OS.has_feature("mobile") else "res://test_output/"
+	get_viewport().get_texture().get_image().save_png(dir + name + ".png")
+	print("[SHOT] ", name)
+
+
+func _onboard_shots() -> void:
+	await get_tree().create_timer(2.0).timeout
+	_shot("onboard_01_survive")
+	if menu != null and menu.guide != null:
+		menu.guide._step(1)
+	await get_tree().create_timer(0.8).timeout
+	_shot("onboard_02_build")
+	if menu != null and menu.guide != null:
+		menu.guide._step(1)
+	await get_tree().create_timer(0.8).timeout
+	_shot("onboard_03_evolve")
+	print("[ONBOARDTEST] done")
+	get_tree().quit()
+
+
+func _splash_shots() -> void:
+	var intro := Intro.new()
+	add_child(intro)
+	intro.finished.connect(func() -> void:
+		show_menu()
+		await get_tree().create_timer(1.2).timeout
+		_shot("splash_03_menu")
+		print("[SPLASHTEST] done")
+		get_tree().quit())
+	await get_tree().create_timer(2.0).timeout
+	_shot("splash_01_title")
+	await get_tree().create_timer(26.6).timeout
+	_shot("splash_02_brand")
 
 
 func _process(_dt: float) -> void:

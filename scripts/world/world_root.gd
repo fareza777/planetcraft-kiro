@@ -594,6 +594,7 @@ func _update_death(dt: float) -> void:
 			_exit_rover()
 		hud.toast("Suit failure: " + player.stats.last_damage + ". Reconstructing at med bay...", TF.RED)
 		sfx.play("die", 0.0, 0.6)
+		Ads.maybe_interstitial("death")
 		player.set_process(false)
 	if _dead_t >= 0.0:
 		_dead_t -= dt

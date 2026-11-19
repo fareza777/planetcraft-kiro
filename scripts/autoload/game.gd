@@ -85,7 +85,7 @@ func has_save() -> bool:
 
 const PROFILE_PATH := "user://profile.dat"
 signal shards_changed(total: int)
-var profile := {"shards": 0, "lifetime": 0, "owned": {}, "equipped": {}}
+var profile := {"shards": 0, "lifetime": 0, "owned": {}, "equipped": {}, "onboarded": false, "remove_ads": false}
 
 
 func load_profile() -> void:
@@ -159,6 +159,24 @@ func owned_kits() -> Array:
 		if Reg.store.get(id, {}).get("cat", "") == "kit":
 			out.append(Reg.store[id])
 	return out
+
+
+func is_onboarded() -> bool:
+	return bool(profile.get("onboarded", false))
+
+
+func set_onboarded() -> void:
+	profile.onboarded = true
+	save_profile()
+
+
+func remove_ads() -> bool:
+	return bool(profile.get("remove_ads", false))
+
+
+func set_remove_ads(on: bool) -> void:
+	profile.remove_ads = on
+	save_profile()
 
 
 func start_new(seed_value: int) -> void:
@@ -283,4 +301,26 @@ func run_self_tests() -> Array:
 	sv.update(1.0, {"temp": 20.0, "o2_zone": true})
 	out.append([sv.o2 > 0.0, "oxygen zone refills oxygen"])
 	out.append([sv.consume(Reg.item("medkit")) and sv.hp > hp_before, "medkit heals"])
+	var saved_profile: Dictionary = profile.duplicate(true)
+	profile.onboarded = false
+	set_onboarded()
+	out.append([bool(profile.onboarded) and FileAccess.file_exists(PROFILE_PATH), "onboarding flag persists"])
+	profile.remove_ads = false
+	set_remove_ads(true)
+	out.append([remove_ads(), "remove-ads entitlement persists"])
+	profile = saved_profile
+	save_profile()
+	out.append([
+		Ads.safe_banner_y(392, 50, 0) == 286 and Ads.safe_banner_y(392, 50, 48) == 286,
+		"banner keeps 56 dp clear of Android navigation buttons",
+	])
+	out.append([
+		Ads.safe_banner_x(872, 320, 0) == 496 and Ads.safe_banner_x(872, 320, 48) == 496,
+		"banner keeps 56 dp clear of side navigation buttons",
+	])
+	out.append([
+		FileAccess.file_exists("res://art/intro/intro.ogv") and FileAccess.file_exists("res://art/intro/f7_brand.ogv"),
+		"title and brand splash videos present",
+	])
+	out.append([Iap.PRODUCT == "remove_ads" and Iap.price == "$4.99", "remove-ads product and list price"])
 	return out

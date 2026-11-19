@@ -1,8 +1,9 @@
 # PlanetCraft: Galactic Survival
 
-An original, fully offline 3D voxel sandbox for Android. Crash-land on an alien world, mine and
-build, automate a colony, tame and hunt alien creatures, fly between six worlds and terraform
-dead planets into living ones.
+An original 3D voxel sandbox for Android. Crash-land on an alien world, mine and build, automate a
+colony, tame and hunt alien creatures, fly between six worlds and terraform dead planets into
+living ones. The Kiroween hackathon build (v0.1.2) is fully offline; the Play Store build (v0.2.0+)
+adds the cinematic intro, first-run field guide and the optional ad layer with Remove Ads.
 
 Built with **Godot 4.7.2 (GDScript)** and developed with **Kiro CLI**. Kiroween 2026 entry,
 **Frankenstein** category.
@@ -20,10 +21,14 @@ Screenshot on the reference phone (Redmi Note 11, Android 13):
 
 ## Download
 
-- **APK:** see the [latest GitHub Release](https://github.com/fareza777/planetcraft-kiro/releases/latest)
-  (debug-signed build produced by CI). Every push also uploads the APK as a CI artifact.
-- Requirements (from the APK manifest): Android 7.0+ (min SDK 24, target SDK 36), arm64-v8a,
-  OpenGL ES 3.0 GPU, about 30 MB of storage. The app requests no permissions and works fully offline.
+- **APK:** the [latest GitHub Release](https://github.com/fareza777/planetcraft-kiro/releases/latest)
+  is the offline v0.1.2 hackathon build. The store build (v0.2.0+) is exported from this branch with
+  Gradle and Google test ad IDs; see [docs/BUILDING.md](docs/BUILDING.md). Replace the IDs and create
+  the Play Console product before attaching it to a release.
+- Requirements: Android 7.0+ (min SDK 24, target SDK 36), arm64-v8a, OpenGL ES 3.0 GPU. The
+  offline v0.1.2 hackathon APK requests no permissions. The store build requests INTERNET and AD_ID
+  for Google AdMob; Remove Ads turns every ad off. Gradle debug APKs are large (~140 MB because of
+  the debug Godot template); release/AAB builds are much smaller.
 - Tested on: Redmi Note 11 (Snapdragon 680, Adreno 610, Android 13). See [docs/TESTING.md](docs/TESTING.md).
 
 ## What is in the game (implemented and tested)
@@ -57,13 +62,38 @@ the reference device. See [docs/TESTING.md](docs/TESTING.md) for the exact resul
   (Obelisk trials, Starfall shrines, alien hives, crashed freighters).
 - **Planet Evolution:** mining raises pollution; powered terraformers raise atmosphere, water and
   life, change the sky colour, convert ground to soil and grass, and eventually make air breathable.
-- **Stellar Store:** offline cosmetic store on the title screen (suits, laser colours, rover and ship
-  paint, starter kits) paid with Stellar Shards, a rare account-wide currency.
-- **App shell:** adaptive launcher icon, boot splash and animated studio intro, Rate (Play Store link), Share (Android share sheet through Godot's AndroidRuntime), About with privacy note and licence links.
+- **Stellar Store:** cosmetic store on the title screen (suits, laser colours, rover and ship paint,
+  starter kits) paid with Stellar Shards, a rare account-wide currency. In the store build an opt-in
+  rewarded ad grants +25 shards, and a one-time Remove Ads purchase hides the ad layer.
+- **App shell:** adaptive launcher icon, cinematic English voice-over title intro, F7 Developer brand
+  ident, first-run three-page Field Guide (onboarding), Rate (Play Store link), Share (Android share
+  sheet through Godot's AndroidRuntime), About with an accurate ads/privacy note and licence links.
 - **UI:** touch controls (floating joystick, drag-look, tap-to-use, hold-to-mine, vector-icon buttons),
   keyboard and mouse on desktop, tabbed item screen, live settings (quality presets, view distance, resolution scale,
   field of view, bloom, clouds, auto-jump, camera shake, damage numbers, vibration, sensitivity,
   button size, invert Y, master and music volume, reset settings, delete save).
+
+## Store build (v0.2.0+): ads and Remove Ads
+
+This is the Play Store shell; the Kiroween v0.1.2 build remains fully offline. All ad and IAP code is
+in the repository and was exercised on the reference phone, with Google's **test** IDs by default.
+
+- **Banner** — title screen only, bottom-right, kept 56 dp clear of Android navigation bars and
+  outside the menu buttons. Hidden during gameplay and whenever a menu overlay or the Field Guide is
+  open.
+- **Interstitial** — after a planet jump or a respawn, with a 60 s session warm-up, a 120 s gap and a
+  maximum of two per session.
+- **Rewarded** — opt-in "Watch ad · +25 Stellar Shards" in the Stellar Store. Verified on device:
+  the test ad completed and the balance rose to 25.
+- **Remove Ads** — one-time Google Play product `remove_ads`, USD 4.99 list (the store shows the local
+  price when Play returns it). Removing ads hides the banner and interstitials, disables the rewarded
+  prompt, persists in the local profile and can be restored after reinstalling. The Play Console
+  product must be created before launch; a sideloaded debug build reports "Remove Ads is not available".
+- **Consent** — Google UMP runs before the SDK initialises; Settings and About expose *Privacy options*.
+
+Before publishing, replace the sample values in `project.godot`:
+`admob/general/android/app_id`, `planetcraft/ads/banner_unit`, `planetcraft/ads/interstitial_unit`,
+`planetcraft/ads/rewarded_unit`. See [docs/BUILDING.md](docs/BUILDING.md#admob-and-play-billing).
 
 Planned work and known gaps are listed in [docs/ROADMAP.md](docs/ROADMAP.md).
 

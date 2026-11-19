@@ -38,3 +38,7 @@ desktop.ini
 # NOTE: /.kiro is intentionally NOT ignored. It holds the steering docs,
 # specs and settings used to build this project with Kiro.
 !.kiro/
+
+# Local media build workspace
+.work/
+android/.build_version
