@@ -1,0 +1,133 @@
+{
+  "images": [
+    {
+      "path": "icon-512.png",
+      "size": [
+        512,
+        512
+      ],
+      "mode": "RGBA",
+      "sha256": "c62de0837e3e9ba8d1006406bab0f3fb18d13bc926743c6c944a965e1d617421"
+    },
+    {
+      "path": "icon-1024.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "mode": "RGBA",
+      "sha256": "27607571a150e8a213522af1aa560222750c4ba9110ab4dd179115b2743cd9c2"
+    },
+    {
+      "path": "feature-graphic-1024x500.png",
+      "size": [
+        1024,
+        500
+      ],
+      "mode": "RGB",
+      "sha256": "4f96c88ea9b2e681ffe667e278286e813a1748f074039f21e34118d199c2ac91"
+    },
+    {
+      "path": "screenshots/01-crash-adapt-survive.png",
+      "size": [
+        1920,
+        1080
+      ],
+      "mode": "RGB",
+      "sha256": "02d6ff7f9601da5182ea14527a0a547fae04c9b9677155012b70e44b9c8d0fe2"
+    },
+    {
+      "path": "screenshots/02-dig-into-alien-worlds.png",
+      "size": [
+        1920,
+        1080
+      ],
+      "mode": "RGB",
+      "sha256": "c57ccc2c01c87c2ecbcc1f87ea31ae80a908bf5c179d03e408555106a48d527e"
+    },
+    {
+      "path": "screenshots/03-craft-what-keeps-you-alive.png",
+      "size": [
+        1920,
+        1080
+      ],
+      "mode": "RGB",
+      "sha256": "a7ac0decca1ac68e488d3b40a3a3bc95e4ebf9d255686c4f90c78ccf94c55809"
+    },
+    {
+      "path": "screenshots/04-put-your-colony-to-work.png",
+      "size": [
+        1920,
+        1080
+      ],
+      "mode": "RGB",
+      "sha256": "50d0a8934a098dd9040b9c3f71854f0bbe11ca7a8cd458c9201bbcd9ab5a177a"
+    },
+    {
+      "path": "screenshots/05-tame-the-wild.png",
+      "size": [
+        1920,
+        1080
+      ],
+      "mode": "RGB",
+      "sha256": "9f696f6eeb986816f580f92fdc90c501e5f2ba3507938add832346adb1c820b9"
+    },
+    {
+      "path": "screenshots/06-go-off-road.png",
+      "size": [
+        1920,
+        1080
+      ],
+      "mode": "RGB",
+      "sha256": "f83cb45c942d91d898100a5e7e4fbe8983d0f63c0109112771f62c988e8feb19"
+    },
+    {
+      "path": "screenshots/07-jump-between-six-worlds.png",
+      "size": [
+        1920,
+        1080
+      ],
+      "mode": "RGB",
+      "sha256": "c9098ad2cbeb6e5b224fceda9b98de8f5bab3a6f550f5553da7a01837ce7b1f9"
+    },
+    {
+      "path": "screenshots/08-give-a-planet-life.png",
+      "size": [
+        1920,
+        1080
+      ],
+      "mode": "RGB",
+      "sha256": "d85e0811389518fcbc7e28c5b429afe01334d6110c9ed461f2998a25358c361b"
+    }
+  ],
+  "videos": [
+    {
+      "path": "planetcraft-youtube-1920x1080.mp4",
+      "size": [
+        1920,
+        1080
+      ],
+      "fps": 30,
+      "frames": 1140,
+      "duration": 38,
+      "video": "H.264",
+      "audio": "stereo AAC",
+      "bytes": 43081424,
+      "sha256": "d2fbd4a81e8363b546685d24ec6f0b2fb52c4b4000633187e656f892e658ac05"
+    },
+    {
+      "path": "planetcraft-vertical-1080x1920.mp4",
+      "size": [
+        1080,
+        1920
+      ],
+      "fps": 30,
+      "frames": 1140,
+      "duration": 38,
+      "video": "H.264",
+      "audio": "stereo AAC",
+      "bytes": 41438470,
+      "sha256": "18ca81e195fa0cec893ec4ce421bf81e5bc61b75d7ca18ca3f6ddb9d743c2036"
+    }
+  ]
+}
