@@ -42,3 +42,4 @@ desktop.ini
 # Local media build workspace
 .work/
 android/.build_version
+android/keystore/signing.properties
