@@ -10,6 +10,7 @@ const RATE := 22050
 var day_player := AudioStreamPlayer.new()
 var night_player := AudioStreamPlayer.new()
 var daylight := 1.0
+var terraformed := 0.0   # 0..1 planet life/atmo progress: uplifts pitch & warmth
 var volume := 0.7
 var _thread: Thread
 var _ready_streams: Array = []
@@ -160,6 +161,9 @@ func _process(dt: float) -> void:
 		p.play()
 	var base := linear_to_db(maxf(volume * float(Game.settings.get("ambience", 0.7)), 0.0001)) - 6.0
 	var dw := clampf(daylight, 0.0, 1.0)
+	var pitch_shift := lerpf(1.0, 1.122, clampf(terraformed, 0.0, 1.0))  # +2 semitones on living worlds
+	day_player.pitch_scale = lerpf(day_player.pitch_scale, pitch_shift, minf(dt * 0.5, 1.0))
+	night_player.pitch_scale = lerpf(night_player.pitch_scale, lerpf(1.0, 1.06, clampf(terraformed, 0.0, 1.0)), minf(dt * 0.5, 1.0))
 	_fade(day_player, base + linear_to_db(maxf(dw, 0.0001)), dt)
 	_fade(night_player, base + linear_to_db(maxf(1.0 - dw, 0.0001)), dt)
 

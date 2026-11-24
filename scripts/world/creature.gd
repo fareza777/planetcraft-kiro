@@ -48,8 +48,12 @@ var tail_node: Node3D
 var _lunge := 0.0
 var _breath := randf() * TAU
 var _dying := 0.0
+var telegraph_t := 0.0
+var telegraph_max := 0.4
+var telegraph_kind := ""
+var stagger_t := 0.0
 const SKINS := {"mossback": "fur", "skitter": "chitin", "glider": "stripes", "stalker": "scales", "frostmaw": "fur",
-	"magmite": "magma", "dunewyrm": "scales", "voidray": "spots", "sentinel": "plates", "void_guardian": "plates", "hive_drone": "chitin"}
+	"magmite": "magma", "dunewyrm": "scales", "voidray": "spots", "sentinel": "plates", "void_guardian": "plates", "cryo_titan": "plates", "hive_drone": "chitin"}
 static var _skin_cache := {}
 
 
@@ -332,6 +336,23 @@ func center() -> Vector3:
 	return global_position + Vector3(0, height * 0.5, 0)
 
 
+## Weakpoint world position (head / eye / boss glowing core) and hit radius.
+func weakpoint_pos() -> Vector3:
+	if head_node != null:
+		return head_node.global_position + Vector3(0, 0.1 * size, 0)
+	if def.get("boss", false):
+		return global_position + Vector3(0, height * 0.55, 0) - global_transform.basis.z * (0.4 * size)
+	return global_position + Vector3(0, height * 0.78, 0) - global_transform.basis.z * (half * 0.65)
+
+
+func weakpoint_radius() -> float:
+	return maxf(0.32, half * 0.75) * (1.25 if def.get("boss", false) else 1.0)
+
+
+func is_weakpoint_hit(hit_pos: Vector3) -> bool:
+	return hit_pos.distance_to(weakpoint_pos()) <= weakpoint_radius() + 0.22
+
+
 # ---------------------------------------------------------------- update
 
 func tick(dt: float, player: Player, near: bool) -> void:
@@ -341,6 +362,7 @@ func tick(dt: float, player: Player, near: bool) -> void:
 	shoot_cd -= dt
 	flee_t -= dt
 	think_t -= dt
+	stagger_t = maxf(0.0, stagger_t - dt)
 	var ppos := player.global_position
 	var d := global_position.distance_to(ppos)
 	if think_t <= 0.0:
@@ -367,26 +389,45 @@ func tick(dt: float, player: Player, near: bool) -> void:
 		stop = 3.5
 	elif state == "chase":
 		stop = (7.0 if def.get("ranged", false) else half + 0.9)
-	if flat.length() > stop:
+	if telegraph_t > 0.0 or stagger_t > 0.0:
+		want = Vector3.ZERO
+	elif flat.length() > stop:
 		want = flat.normalized() * spd
 	elif state == "chase" and def.get("ranged", false) and flat.length() < 5.0:
 		want = -flat.normalized() * spd * 0.6
-	# attack
-	if state == "chase":
-		var tgt_center := tgt + Vector3(0, 0.9, 0)
-		if def.get("ranged", false):
-			if shoot_cd <= 0.0 and to.length() < 22.0:
-				shoot_cd = 0.6 if def.get("boss", false) else 1.7
+	# Attack telegraph (~0.4 s wind-up so the player can read and dash/dodge)
+	if telegraph_t > 0.0:
+		telegraph_t -= dt
+		if flat.length() > 0.05:
+			var yaw_t := atan2(-flat.x, -flat.z)
+			rotation.y = lerp_angle(rotation.y, yaw_t, minf(dt * 12.0, 1.0))
+		if telegraph_t <= 0.0:
+			var tgt_center := tgt + Vector3(0, 0.9, 0)
+			if telegraph_kind == "ranged":
+				shoot_cd = 0.75 if def.get("boss", false) else 1.7
 				var from := center()
 				fire_projectile.emit(self, from, (tgt_center - from).normalized())
-		elif to.length() < half + 1.4 and attack_cd <= 0.0:
-			attack_cd = 1.1
-			if prey != null and is_instance_valid(prey):
-				prey.hit(float(def.dmg), global_position)
-			else:
-				attacked_player.emit(self, float(def.dmg))
-			vel += flat.normalized() * 2.0
-			_lunge = 0.35
+			elif telegraph_kind == "melee":
+				attack_cd = 1.15
+				if to.length() < half + 2.1:
+					if prey != null and is_instance_valid(prey):
+						prey.hit(float(def.dmg), global_position)
+					else:
+						attacked_player.emit(self, float(def.dmg))
+				if flat.length() > 0.01:
+					vel += flat.normalized() * 3.2
+				_lunge = 0.35
+			telegraph_kind = ""
+	elif state == "chase" and stagger_t <= 0.0:
+		if def.get("ranged", false):
+			if shoot_cd <= 0.0 and to.length() < 22.0:
+				telegraph_kind = "ranged"
+				telegraph_max = 0.32 if def.get("boss", false) else 0.42
+				telegraph_t = telegraph_max
+		elif to.length() < half + 1.45 and attack_cd <= 0.0:
+			telegraph_kind = "melee"
+			telegraph_max = 0.38
+			telegraph_t = telegraph_max
 	if fly:
 		_move_fly(dt, want, tgt)
 	else:
@@ -398,7 +439,13 @@ func tick(dt: float, player: Player, near: bool) -> void:
 		_animate(dt)
 	if flash > 0.0:
 		flash -= dt
-		_body_mat.emission = Color(1, 1, 1) * (0.9 if flash > 0.0 else 0.0)
+		_body_mat.emission = Color(1, 1, 1) * (0.95 if flash > 0.0 else 0.0)
+	elif telegraph_t > 0.0:
+		var k := 1.0 - clampf(telegraph_t / maxf(telegraph_max, 0.05), 0.0, 1.0)
+		var pulse := 0.55 + 0.45 * sin(Time.get_ticks_msec() * 0.04)
+		_body_mat.emission = Color(1.0, 0.25, 0.08) * (0.35 + k * 0.75) * pulse
+	else:
+		_body_mat.emission = Color.BLACK
 
 
 func _think(player: Player, d: float) -> void:
@@ -508,9 +555,15 @@ func _animate(dt: float) -> void:
 	pivot.scale = Vector3(1.0, 1.0 + sin(_breath) * 0.025 * (1.0 - amp), 1.0) if def.plan != "hopper" else pivot.scale
 	if _lunge > 0.0:
 		_lunge -= dt
-		pivot.position.z = -sin(clampf(_lunge / 0.35, 0.0, 1.0) * PI) * 0.35 * size
+		pivot.position.z = -sin(clampf(_lunge / 0.35, 0.0, 1.0) * PI) * 0.38 * size
+		pivot.rotation.x = 0.0
+	elif telegraph_t > 0.0:
+		var k := 1.0 - clampf(telegraph_t / maxf(telegraph_max, 0.05), 0.0, 1.0)
+		pivot.position.z = k * 0.28 * size
+		pivot.rotation.x = k * 0.26
 	else:
 		pivot.position.z = 0.0
+		pivot.rotation.x = move_toward(pivot.rotation.x, 0.0, dt * 4.0)
 	if tail_node != null:
 		tail_node.rotation.y = sin(phase * (0.6 if amp < 0.2 else 1.4)) * (0.5 if amp < 0.2 else 0.3)
 		tail_node.rotation.x = -0.25 + sin(_breath) * 0.05

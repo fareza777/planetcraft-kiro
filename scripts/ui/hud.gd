@@ -8,7 +8,9 @@ const TF := preload("res://scripts/ui/theme_factory.gd")
 
 var player: Player
 var sky: SkyController
-var info := {"planet": "", "biome": "", "fps": 0, "show_fps": true, "quest": "", "extra": "", "driving": false, "waypoint": null, "wp_label": "", "banner": ""}
+var info := {"planet": "", "biome": "", "fps": 0, "show_fps": false, "quest": "", "extra": "", "driving": false, "waypoint": null, "wp_label": "", "banner": "", "build_hint": ""}
+var scan_pings: Array = []   # [{pos: Vector3, label: String, col: Color, time: float}]
+var minimap_data := {"pois": [], "creatures": [], "custom_wp": null}
 var _story_speaker := ""
 var _story_text := ""
 var _story_t := 0.0
@@ -94,6 +96,9 @@ func _process(dt: float) -> void:
 	for t in toasts:
 		t.time -= dt
 	toasts = toasts.filter(func(t: Dictionary) -> bool: return t.time > 0.0)
+	for sp in scan_pings:
+		sp.time -= dt
+	scan_pings = scan_pings.filter(func(sp: Dictionary) -> bool: return sp.time > 0.0)
 	if player != null:
 		if player.stats.hp < _last_hp - 0.5:
 			damage_flash = 1.0
@@ -124,14 +129,16 @@ func _draw() -> void:
 	if player == null:
 		return
 	var st := player.stats
-	# underwater / damage overlays
+	# underwater / status / damage overlays
 	if player.head_in_fluid:
 		draw_rect(Rect2(Vector2.ZERO, size), Color(0.05, 0.25, 0.5, 0.35))
+	_draw_status_overlays(st)
 	if damage_flash > 0.0:
-		draw_rect(Rect2(Vector2.ZERO, size), Color(0.9, 0.05, 0.1, damage_flash * 0.25))
+		_draw_vignette(Color(0.95, 0.06, 0.1, damage_flash * 0.42), 110.0)
+		draw_rect(Rect2(Vector2.ZERO, size), Color(0.9, 0.05, 0.1, damage_flash * 0.14))
 	if st.hp < 25.0:
-		var pulse := 0.12 + 0.08 * sin(Time.get_ticks_msec() * 0.008)
-		draw_rect(Rect2(Vector2.ZERO, size), Color(0.6, 0.0, 0.05, pulse))
+		var pulse := 0.18 + 0.14 * sin(Time.get_ticks_msec() * 0.008)
+		_draw_vignette(Color(0.75, 0.02, 0.08, pulse), 130.0)
 	# stats panel
 	var px := 18.0
 	var py := 16.0
@@ -160,17 +167,22 @@ func _draw() -> void:
 	var coords := "X %d  Y %d  Z %d" % [floori(p.x), floori(p.y), floori(p.z)]
 	var cw := font.get_string_size(coords, HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x
 	_text(Vector2((size.x - cw) * 0.5, 70), coords, 16, TF.DIM)
+	var next_y := 190.0
 	if info.quest != "":
-		_draw_tracker(px - 8, 190)
+		next_y = _draw_tracker(px - 8, next_y) + 8.0
+	if Game.pinned_recipe != "":
+		_draw_pinned_recipe(px - 8, next_y)
 	if info.show_fps:
 		_text(Vector2(size.x - 330, 30), "%d FPS" % info.fps, 18, TF.GREEN if info.fps >= 30 else TF.RED)
 	if info.extra != "":
-		_text(Vector2(size.x - 330, 52), info.extra, 14, TF.DIM)
+		_text(Vector2(size.x - 330, 52 if info.show_fps else 30), info.extra, 14, TF.DIM)
 	# warning
 	if st.warning != "" and int(Time.get_ticks_msec() / 400) % 2 == 0:
 		var ww := font.get_string_size(st.warning, HORIZONTAL_ALIGNMENT_LEFT, -1, 30).x
 		_text(Vector2((size.x - ww) * 0.5, size.y * 0.3), st.warning, 30, TF.RED)
+	_draw_scan_pings()
 	_draw_waypoint()
+	_draw_minimap()
 	_draw_story()
 	if info.banner != "":
 		var bw := font.get_string_size(info.banner, HORIZONTAL_ALIGNMENT_LEFT, -1, 24).x
@@ -193,10 +205,16 @@ func _draw() -> void:
 	draw_rect(Rect2(c.x - 1.5, c.y + 3, 3, 8), cc)
 	if player.mine_progress > 0.0:
 		draw_arc(c, 20, -PI / 2, -PI / 2 + TAU * clampf(player.mine_progress, 0, 1), 32, TF.CYAN, 4.0, true)
+	# Subtle dash readiness pip under crosshair
+	var dash_col := TF.CYAN if player.dash_ready() else Color(1, 1, 1, 0.22)
+	draw_circle(c + Vector2(0, 22), 3.0, dash_col)
 	if not player.target.is_empty():
 		var name: String = Reg.block_def(player.target.id).get("label", "")
 		var nw := font.get_string_size(name, HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x
 		_text(Vector2(c.x - nw * 0.5, c.y + 44), name, 16, Color(1, 1, 1, 0.8))
+	if String(info.get("build_hint", "")) != "":
+		var bh: String = info.build_hint
+		_text(Vector2(22, size.y - 18), bh, 13, Color(0.65, 0.9, 1.0, 0.72))
 	# hotbar
 	var hr := hotbar_rect()
 	draw_style_box(TF.box(TF.BG, TF.LINE, 12, 2, 0), hr.grow(8))
@@ -237,7 +255,7 @@ func _draw_toasts(start_y: float) -> void:
 		ty -= 38
 
 
-func _draw_tracker(x: float, y: float) -> void:
+func _draw_tracker(x: float, y: float) -> float:
 	var q: String = info.quest
 	var title := q
 	var body := ""
@@ -252,6 +270,97 @@ func _draw_tracker(x: float, y: float) -> void:
 	draw_rect(Rect2(x, y, 4, h), TF.AMBER)
 	_text(Vector2(x + 14, y + 22), title, 17, TF.AMBER)
 	draw_multiline_string(font, Vector2(x + 14, y + 42), body, HORIZONTAL_ALIGNMENT_LEFT, w - 24, 15, -1, Color(0.92, 0.94, 1.0, 0.92))
+	return y + h
+
+
+func _draw_pinned_recipe(x: float, y: float) -> void:
+	var r: Dictionary = {}
+	for rec in Reg.recipes:
+		if rec.out == Game.pinned_recipe:
+			r = rec
+			break
+	if r.is_empty():
+		return
+	var ready := player.inv.can_craft(r)
+	var parts := []
+	for k in r.in:
+		var need := int(r.in[k])
+		var have := player.inv.count(k)
+		parts.append("%s %d/%d" % [Reg.item_label(k), have, need])
+	var body := ("✔ READY TO CRAFT" if ready else " · ".join(parts))
+	var w := clampf(size.x * 0.3, 300.0, 460.0)
+	var bsz := font.get_multiline_string_size(body, HORIZONTAL_ALIGNMENT_LEFT, w - 24, 14)
+	var h := 30.0 + bsz.y
+	var border := TF.GREEN if ready else TF.CYAN
+	draw_style_box(TF.box(Color(0.03, 0.07, 0.1, 0.82), Color(border.r, border.g, border.b, 0.6), 10, 2, 0), Rect2(x, y, w, h))
+	draw_rect(Rect2(x, y, 4, h), border)
+	_text(Vector2(x + 14, y + 20), "PIN · " + Reg.item_label(r.out), 15, border)
+	draw_multiline_string(font, Vector2(x + 14, y + 38), body, HORIZONTAL_ALIGNMENT_LEFT, w - 24, 14, -1, TF.GREEN if ready else Color(0.88, 0.94, 1.0, 0.92))
+
+
+func _draw_scan_pings() -> void:
+	if scan_pings.is_empty() or player.cam == null:
+		return
+	var cam: Camera3D = get_viewport().get_camera_3d()
+	if cam == null:
+		return
+	for sp in scan_pings:
+		var wp: Vector3 = sp.pos
+		if cam.is_position_behind(wp):
+			continue
+		var p2 := cam.unproject_position(wp)
+		if p2.x < 16 or p2.x > size.x - 16 or p2.y < 16 or p2.y > size.y - 16:
+			continue
+		var a := clampf(float(sp.time) * 0.7, 0.0, 0.92)
+		var col: Color = sp.col
+		col.a = a
+		var r := 9.0 + sin(Time.get_ticks_msec() * 0.01) * 1.5
+		draw_arc(p2, r, 0, TAU, 18, col, 2.0, true)
+		draw_circle(p2, 2.5, col)
+		var dist := int(player.global_position.distance_to(wp))
+		var lbl := "%s %dm" % [String(sp.label), dist]
+		_text(p2 + Vector2(12, 5), lbl, 13, col)
+
+
+func _draw_minimap() -> void:
+	var r := 52.0
+	var center := Vector2(size.x - 68.0, 152.0)
+	draw_circle(center, r + 3.0, Color(0.02, 0.03, 0.08, 0.78))
+	draw_arc(center, r + 2.0, 0, TAU, 36, TF.LINE, 2.0, true)
+	draw_arc(center, r * 0.5, 0, TAU, 24, Color(1, 1, 1, 0.08), 1.0, true)
+	var pp := player.global_position
+	var scale_m := r / 64.0   # 64-block radar radius
+	var yaw := player.yaw
+	var cs := cos(-yaw)
+	var sn := sin(-yaw)
+	# N indicator rotated relative to player heading
+	var n_dir := Vector2(sn, -cs) * (r - 8.0)
+	_text(center + n_dir - Vector2(4, -4), "N", 12, TF.AMBER)
+	# Nearby creatures
+	for cr in minimap_data.get("creatures", []):
+		var rel: Vector2 = cr.rel
+		var rot := Vector2(rel.x * cs - rel.y * sn, rel.x * sn + rel.y * cs) * scale_m
+		if rot.length() < r - 4.0:
+			draw_circle(center + rot, 2.5, cr.col)
+	# POIs
+	for poi in minimap_data.get("pois", []):
+		var p3: Vector3 = poi.pos
+		var rel := Vector2(p3.x - pp.x, p3.z - pp.z)
+		var rot := Vector2(rel.x * cs - rel.y * sn, rel.x * sn + rel.y * cs) * scale_m
+		if rot.length() > r - 5.0:
+			rot = rot.normalized() * (r - 5.0)
+		var col: Color = poi.col
+		draw_colored_polygon(PackedVector2Array([center + rot + Vector2(0, -4), center + rot + Vector2(4, 0), center + rot + Vector2(0, 4), center + rot + Vector2(-4, 0)]), col)
+	# Custom waypoint
+	if minimap_data.get("custom_wp", null) != null:
+		var wp: Vector3 = minimap_data.custom_wp
+		var rel := Vector2(wp.x - pp.x, wp.z - pp.z)
+		var rot := Vector2(rel.x * cs - rel.y * sn, rel.x * sn + rel.y * cs) * scale_m
+		if rot.length() > r - 5.0:
+			rot = rot.normalized() * (r - 5.0)
+		draw_circle(center + rot, 4.0, TF.AMBER)
+	# Player triangle pointing up (forward)
+	draw_colored_polygon(PackedVector2Array([center + Vector2(0, -7), center + Vector2(5, 5), center + Vector2(-5, 5)]), Color.WHITE)
 
 
 func _draw_waypoint() -> void:
@@ -321,6 +430,62 @@ func _bar(x: float, y: float, label: String, v: float, mx: float, col: Color) ->
 	draw_rect(Rect2(r.position, Vector2(r.size.x * f, r.size.y)), c)
 	draw_rect(Rect2(r.position, Vector2(r.size.x * f, 4)), Color(1, 1, 1, 0.25))
 	_text(Vector2(x + 254, y + 19), str(int(v)), 16, TF.TEXT)
+
+
+func _draw_vignette(col: Color, band: float) -> void:
+	if col.a <= 0.005:
+		return
+	var steps := 4
+	for i in steps:
+		var t := float(i) / float(steps)
+		var inset := band * t
+		var thick := band / float(steps) + 1.0
+		var a := col.a * (1.0 - t) * (1.0 - t)
+		var c := Color(col.r, col.g, col.b, a)
+		draw_rect(Rect2(inset, inset, size.x - inset * 2.0, thick), c)
+		draw_rect(Rect2(inset, size.y - inset - thick, size.x - inset * 2.0, thick), c)
+		draw_rect(Rect2(inset, inset + thick, thick, size.y - (inset + thick) * 2.0), c)
+		draw_rect(Rect2(size.x - inset - thick, inset + thick, thick, size.y - (inset + thick) * 2.0), c)
+
+
+func _draw_status_overlays(st: Survival) -> void:
+	var t := Time.get_ticks_msec() * 0.001
+	# Low oxygen: pulsing deep-cyan/blue vignette
+	if st.o2 < 35.0:
+		var k := clampf((35.0 - st.o2) / 35.0, 0.0, 1.0)
+		var pulse := 0.72 + 0.28 * sin(t * (4.0 + k * 5.0))
+		_draw_vignette(Color(0.08, 0.42, 0.85, k * 0.52 * pulse), 100.0 + k * 55.0)
+	# Hypothermia / freezing: crisp icy frost border & corner crystals
+	if st.body_temp < 0.0:
+		var k := clampf(-st.body_temp / 30.0, 0.0, 1.0)
+		_draw_vignette(Color(0.68, 0.9, 1.0, k * 0.48), 85.0 + k * 45.0)
+		var ic := Color(0.85, 0.96, 1.0, k * 0.55)
+		var sz := 36.0 + k * 44.0
+		draw_colored_polygon(PackedVector2Array([Vector2.ZERO, Vector2(sz, 0), Vector2(0, sz)]), ic)
+		draw_colored_polygon(PackedVector2Array([Vector2(size.x, 0), Vector2(size.x - sz, 0), Vector2(size.x, sz)]), ic)
+		draw_colored_polygon(PackedVector2Array([Vector2(0, size.y), Vector2(sz, size.y), Vector2(0, size.y - sz)]), ic)
+		draw_colored_polygon(PackedVector2Array([size, Vector2(size.x - sz, size.y), Vector2(size.x, size.y - sz)]), ic)
+	# Hyperthermia / extreme heat: pulsing ember border
+	if st.body_temp > 42.0:
+		var k := clampf((st.body_temp - 42.0) / 28.0, 0.0, 1.0)
+		var pulse := 0.75 + 0.25 * sin(t * 5.5)
+		_draw_vignette(Color(1.0, 0.35, 0.08, k * 0.42 * pulse), 95.0)
+	# Radiation: green edge glow + animated Geiger static flecks & scanlines
+	if st.rad > 10.0:
+		var k := clampf((st.rad - 10.0) / 80.0, 0.0, 1.0)
+		var pulse := 0.75 + 0.25 * sin(t * 9.0)
+		_draw_vignette(Color(0.45, 0.95, 0.2, k * 0.36 * pulse), 80.0)
+		var seed_i := int(t * 18.0)
+		var count := int(10 + k * 34)
+		for i in count:
+			var h1 := fposmod(sin(float(seed_i * 19 + i * 73) * 12.9898) * 43758.5453, 1.0)
+			var h2 := fposmod(sin(float(seed_i * 31 + i * 97) * 78.233) * 24634.6345, 1.0)
+			var sx := h1 * size.x
+			var sy := h2 * size.y
+			draw_rect(Rect2(sx, sy, 3.0 + k * 6.0, 2.0), Color(0.65, 1.0, 0.35, 0.14 + k * 0.25))
+		if k > 0.25:
+			var bar_y := fposmod(t * 240.0, size.y)
+			draw_rect(Rect2(0, bar_y, size.x, 2.0), Color(0.6, 1.0, 0.3, k * 0.2))
 
 
 func _text(pos: Vector2, s: String, sz: int, c: Color) -> void:

@@ -40,9 +40,11 @@ var _rd_desc: Label
 var _rd_ing: VBoxContainer
 var _rd_craft: Button
 var _rd_craft5: Button
+var _rd_pin: Button
 var _rd_station: Label
 var _suit_box: VBoxContainer
 var _quest_box: VBoxContainer
+var _tech_box: VBoxContainer
 var _dirty := false
 
 
@@ -63,9 +65,10 @@ func _ready() -> void:
 	var bar := HBoxContainer.new()
 	bar.add_theme_constant_override("separation", 8)
 	outer.add_child(bar)
-	for i in 4:
-		var names := ["INVENTORY", "FABRICATE", "SUIT", "JOURNAL"]
+	for i in 5:
+		var names := ["INVENTORY", "FABRICATE", "TECH TREE", "SUIT", "JOURNAL"]
 		var b := _tab_button(names[i])
+		b.custom_minimum_size = Vector2(132, 52)
 		b.pressed.connect(_set_tab.bind(i))
 		bar.add_child(b)
 		_tabs.append(b)
@@ -79,7 +82,7 @@ func _ready() -> void:
 	stack.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	stack.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	outer.add_child(stack)
-	_pages = [_build_inventory(), _build_fabricate(), _build_suit(), _build_quests()]
+	_pages = [_build_inventory(), _build_fabricate(), _build_tech_tree(), _build_suit(), _build_quests()]
 	for p in _pages:
 		p.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		stack.add_child(p)
@@ -384,13 +387,15 @@ func _build_fabricate() -> Control:
 	d.add_child(_rd_ing)
 	var cr := HBoxContainer.new()
 	d.add_child(cr)
-	_rd_craft = TF.button("CRAFT", _craft.bind(1), 150)
-	_rd_craft5 = TF.button("×5", _craft.bind(5), 80)
+	_rd_craft = TF.button("CRAFT", _craft.bind(1), 130)
+	_rd_craft5 = TF.button("×5", _craft.bind(5), 70)
+	_rd_pin = TF.button("PIN HUD", _toggle_pin, 108)
 	_rd_craft.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_rd_craft.add_theme_stylebox_override("normal", TF.box(Color(0.15, 0.4, 0.3, 0.95), TF.GREEN, 12, 2, 14))
 	_rd_craft.add_theme_stylebox_override("hover", TF.box(Color(0.2, 0.5, 0.38, 0.95), TF.GREEN, 12, 2, 14))
 	cr.add_child(_rd_craft)
 	cr.add_child(_rd_craft5)
+	cr.add_child(_rd_pin)
 	return v
 
 
@@ -486,6 +491,8 @@ func _update_recipe_detail() -> void:
 		_rd_desc.text = "Recipes that need a station (Fabricator, Smelter, Assembler, Refinery) unlock when you stand within 5 blocks of it."
 		_rd_craft.disabled = true
 		_rd_craft5.disabled = true
+		_rd_pin.disabled = true
+		_rd_pin.text = "PIN HUD"
 		return
 	var r: Dictionary = Reg.recipes[_sel_recipe]
 	var it := Reg.item(r.out)
@@ -517,6 +524,21 @@ func _update_recipe_detail() -> void:
 		if player.inv.count(k) < int(r.in[k]) * 5:
 			five = false
 	_rd_craft5.disabled = not five
+	_rd_pin.disabled = false
+	var pinned: bool = Game.pinned_recipe == r.out
+	_rd_pin.text = "UNPIN" if pinned else "PIN HUD"
+
+
+func _toggle_pin() -> void:
+	if _sel_recipe < 0:
+		return
+	var out_id: String = Reg.recipes[_sel_recipe].out
+	Game.pinned_recipe = "" if Game.pinned_recipe == out_id else out_id
+	if player != null:
+		player.toast.emit(("Pinned %s to HUD" % Reg.item_label(out_id)) if Game.pinned_recipe != "" else "Unpinned recipe", TF.CYAN)
+		if player.sfx != null:
+			player.sfx.play("ui", -6.0)
+	_update_recipe_detail()
 
 
 func _craft(times: int) -> void:
@@ -528,9 +550,98 @@ func _craft(times: int) -> void:
 		if _station_ok(r) and player.inv.craft(r):
 			made += 1
 	if made > 0:
+		if Game.pinned_recipe == r.out:
+			Game.pinned_recipe = ""
 		Game.notify_crafted(r.out, int(r.get("n", 1)) * made)
 		UiAnim.flash(_rd_icon, Color(0.6, 2.0, 1.0))
 		UiAnim.bounce(_rd_icon, 1.25)
+
+
+# ---------------------------------------------------------------- tech tree tab
+
+func _build_tech_tree() -> Control:
+	var scroll := ScrollContainer.new()
+	TouchScroll.attach(scroll)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_tech_box = VBoxContainer.new()
+	_tech_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_tech_box.add_theme_constant_override("separation", 12)
+	scroll.add_child(_tech_box)
+	return scroll
+
+
+func _refresh_tech_tree() -> void:
+	for c in _tech_box.get_children():
+		c.queue_free()
+	var head := TF.label("TECH PROGRESSION  ·  tap any node to pin or inspect its recipe", 18, TF.CYAN)
+	_tech_box.add_child(head)
+	var tiers := [
+		["TIER 0 · HAND SURVIVAL", "hand", TF.GREEN, "Available anywhere — craft your first Fabricator."],
+		["TIER 1 · FABRICATOR", "fabricator", TF.CYAN, "Base tools, power, O₂, rover & basic weapons."],
+		["TIER 2 · SMELTER", "smelter", TF.AMBER, "Refines raw ores into ingots and alloy plates."],
+		["TIER 3 · ASSEMBLER", "assembler", Color(0.77, 0.54, 1.0), "Advanced electronics, drones, starship parts & rare gear."],
+		["TIER 4 · REFINERY", "refinery", Color(1.0, 0.55, 0.35), "Rocket fuel, high-tier energy, catalysts & terraforming."],
+	]
+	for t in tiers:
+		var st_id: String = t[1]
+		var unlocked: bool = st_id == "hand" or stations.has(st_id) or player.inv.count(st_id) > 0
+		var col: Color = t[2]
+		var pc := PanelContainer.new()
+		pc.add_theme_stylebox_override("panel", TF.box(Color(0.05, 0.06, 0.13, 0.94), col if unlocked else Color(1, 1, 1, 0.1), 12, 2 if unlocked else 1, 12))
+		var v := VBoxContainer.new()
+		v.add_theme_constant_override("separation", 8)
+		pc.add_child(v)
+		var hdr := HBoxContainer.new()
+		v.add_child(hdr)
+		var lbl := TF.label(t[0] + ("  ✔ UNLOCKED" if unlocked else "  🔒 BUILD STATION"), 17, col if unlocked else TF.DIM)
+		lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		hdr.add_child(lbl)
+		hdr.add_child(TF.label(t[3], 13, TF.DIM))
+		var grid := GridContainer.new()
+		grid.columns = 5
+		grid.add_theme_constant_override("h_separation", 8)
+		grid.add_theme_constant_override("v_separation", 8)
+		v.add_child(grid)
+		for ri in Reg.recipes.size():
+			var r: Dictionary = Reg.recipes[ri]
+			if r.get("station", "hand") != st_id:
+				continue
+			var can := _station_ok(r) and player.inv.can_craft(r)
+			var pinned: bool = Game.pinned_recipe == String(r.out)
+			var b := Button.new()
+			b.focus_mode = Control.FOCUS_NONE
+			b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			b.custom_minimum_size = Vector2(140, 52)
+			var bd := TF.AMBER if pinned else (TF.GREEN if can else (col.darkened(0.35) if unlocked else Color(1, 1, 1, 0.08)))
+			b.add_theme_stylebox_override("normal", TF.box(Color(0.08, 0.1, 0.18, 0.95) if unlocked else Color(0.04, 0.04, 0.08, 0.8), bd, 8, 2 if (can or pinned) else 1, 6))
+			b.add_theme_stylebox_override("hover", TF.box(Color(0.13, 0.18, 0.28, 0.98), TF.CYAN, 8, 2, 6))
+			b.pressed.connect(func() -> void:
+				_sel_recipe = ri
+				_set_tab(1)
+				_select_recipe(ri))
+			var hb := HBoxContainer.new()
+			hb.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			hb.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+			hb.offset_left = 6
+			hb.offset_right = -6
+			b.add_child(hb)
+			var ic := TextureRect.new()
+			ic.texture = Reg.icon(r.out)
+			ic.custom_minimum_size = Vector2(34, 34)
+			ic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			ic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			ic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+			ic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			ic.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+			hb.add_child(ic)
+			var nm := TF.label(("★ " if pinned else "") + Reg.item_label(r.out), 13, TF.GREEN if can else (TF.TEXT if unlocked else TF.DIM))
+			nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			nm.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+			nm.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			nm.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			hb.add_child(nm)
+			grid.add_child(b)
+		_tech_box.add_child(pc)
 
 
 # ---------------------------------------------------------------- suit / quests
@@ -618,9 +729,82 @@ func _refresh_suit() -> void:
 		v.add_child(l)
 		v.add_child(TF.label("INSTALLED" if have else "not installed", 13, TF.GREEN if have else TF.DIM))
 		grid.add_child(card)
+	# Suit Module Slots (socket rare drops for passive bonuses)
+	_suit_box.add_child(TF.label("SUIT MODULE SLOTS  ·  socket rare drops for passive suit bonuses", 20, Color(0.77, 0.54, 1.0)))
+	var mod_row := HBoxContainer.new()
+	mod_row.add_theme_constant_override("separation", 12)
+	_suit_box.add_child(mod_row)
+	for slot_i in Survival.MODULE_SLOTS:
+		var mid: String = String(st.modules[slot_i]) if slot_i < st.modules.size() else ""
+		var mc := _card()
+		mc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var mv := VBoxContainer.new()
+		mv.add_theme_constant_override("separation", 6)
+		mc.add_child(mv)
+		mv.add_child(TF.label("SLOT %d" % (slot_i + 1), 13, TF.DIM))
+		if mid != "":
+			var mh := HBoxContainer.new()
+			mv.add_child(mh)
+			var mic := TextureRect.new()
+			mic.texture = Reg.icon(mid)
+			mic.custom_minimum_size = Vector2(44, 44)
+			mic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			mic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+			mh.add_child(mic)
+			var mlv := VBoxContainer.new()
+			mlv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			mh.add_child(mlv)
+			mlv.add_child(TF.label(Reg.item_label(mid), 16, Reg.rarity_color(mid)))
+			mlv.add_child(TF.label(Survival.MODULE_DEFS.get(mid, {}).get("desc", ""), 13, TF.GREEN))
+			var rm := TF.button("Remove", _unequip_module.bind(slot_i), 110)
+			rm.custom_minimum_size.y = 36
+			mv.add_child(rm)
+		else:
+			mv.add_child(TF.label("Empty module bay", 15, TF.DIM))
+			var avail := HBoxContainer.new()
+			avail.add_theme_constant_override("separation", 6)
+			mv.add_child(avail)
+			var any_mod := false
+			for key in Survival.MODULE_DEFS:
+				if player.inv.count(key) > 0:
+					any_mod = true
+					var eb := TF.button(Reg.item_label(key), _equip_module.bind(slot_i, key), 0)
+					eb.custom_minimum_size = Vector2(0, 36)
+					eb.add_theme_font_size_override("font_size", 13)
+					avail.add_child(eb)
+					if avail.get_child_count() >= 3:
+						break
+			if not any_mod:
+				mv.add_child(TF.label("Hunt creatures & elites for rare cores/pearls.", 13, TF.DIM))
+		mod_row.add_child(mc)
 	if evolution != null:
 		_suit_box.add_child(TF.label("PLANET", 22, TF.GREEN))
 		_suit_box.add_child(TF.label(evolution.summary(), 17, TF.TEXT))
+
+
+func _equip_module(slot_i: int, item_id: String) -> void:
+	if not player.inv.remove(item_id, 1):
+		return
+	player.stats.modules[slot_i] = item_id
+	player.apply_modules()
+	player.toast.emit("Socketed %s (%s)" % [Reg.item_label(item_id), Survival.MODULE_DEFS.get(item_id, {}).get("desc", "")], Reg.rarity_color(item_id))
+	if player.sfx != null:
+		player.sfx.play("pickup", -3.0)
+	_refresh_suit()
+
+
+func _unequip_module(slot_i: int) -> void:
+	var old: String = String(player.stats.modules[slot_i])
+	if old == "":
+		return
+	if player.inv.add(old, 1) > 0:
+		player.toast.emit("Inventory full", TF.RED)
+		return
+	player.stats.modules[slot_i] = ""
+	player.apply_modules()
+	if player.sfx != null:
+		player.sfx.play("ui", -5.0)
+	_refresh_suit()
 
 
 func _reward_row(rewards: Array, xp: int) -> HBoxContainer:
@@ -720,6 +904,41 @@ func _refresh_quests() -> void:
 		v.add_child(_progress_bar(quests.goal_progress(sq, int(quests.side[sid].progress)), TF.GREEN if ready else TF.CYAN))
 		v.add_child(_reward_row(sq.get("reward", []), int(sq.get("xp", 0))))
 		_quest_box.add_child(pc)
+	# Daily Challenges & Achievements (offline Stellar Shard progression)
+	_quest_box.add_child(TF.label("DAILY CHALLENGES  ·  earn Stellar Shards offline", 20, TF.CYAN))
+	var drow := HBoxContainer.new()
+	drow.add_theme_constant_override("separation", 10)
+	_quest_box.add_child(drow)
+	for ch in Game.daily_challenges():
+		var done: bool = bool(ch.get("done", false))
+		var dc := PanelContainer.new()
+		dc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		dc.add_theme_stylebox_override("panel", TF.box(Color(0.05, 0.09, 0.12, 0.94), TF.GREEN if done else TF.CYAN, 10, 2 if done else 1, 10))
+		var dv := VBoxContainer.new()
+		dv.add_theme_constant_override("separation", 4)
+		dc.add_child(dv)
+		dv.add_child(TF.label(("✔ " if done else "◈ ") + String(ch.title), 16, TF.GREEN if done else TF.TEXT))
+		dv.add_child(TF.label("%s (%d / %d)" % [String(ch.desc), int(ch.prog), int(ch.goal)], 13, TF.DIM))
+		dv.add_child(TF.label("+%d Stellar Shards" % int(ch.shards), 13, TF.AMBER))
+		drow.add_child(dc)
+	var ach_map: Dictionary = Game.profile.get("achievements", {})
+	_quest_box.add_child(TF.label("ACHIEVEMENTS  ·  %d / %d unlocked" % [ach_map.size(), Game.ACHIEVEMENTS.size()], 20, TF.AMBER))
+	var agrid := GridContainer.new()
+	agrid.columns = 2
+	agrid.add_theme_constant_override("h_separation", 8)
+	agrid.add_theme_constant_override("v_separation", 6)
+	_quest_box.add_child(agrid)
+	for aid in Game.ACHIEVEMENTS:
+		var ad: Dictionary = Game.ACHIEVEMENTS[aid]
+		var got := ach_map.has(aid)
+		var ap := PanelContainer.new()
+		ap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		ap.add_theme_stylebox_override("panel", TF.box(Color(0.06, 0.07, 0.13, 0.92), TF.AMBER if got else Color(1, 1, 1, 0.08), 8, 1, 8))
+		var av := VBoxContainer.new()
+		ap.add_child(av)
+		av.add_child(TF.label(("★ " if got else "○ ") + String(ad.title) + "  (+%d Shards)" % int(ad.shards), 15, TF.AMBER if got else TF.DIM))
+		av.add_child(TF.label(String(ad.desc), 13, TF.TEXT if got else TF.DIM))
+		agrid.add_child(ap)
 	# bestiary
 	_quest_box.add_child(TF.label("BESTIARY  ·  hunt elites (★) for 4× rare drop chance", 22, Color(0.77, 0.54, 1.0)))
 	var grid := GridContainer.new()
@@ -819,8 +1038,10 @@ func _set_tab(i: int, instant := false) -> void:
 		1:
 			_refresh_recipes()
 		2:
-			_refresh_suit()
+			_refresh_tech_tree()
 		3:
+			_refresh_suit()
+		4:
 			_refresh_quests()
 	if not instant:
 		UiAnim.slide_in(_pages[i], Vector2(24, 0), 0.0, 0.22)

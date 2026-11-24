@@ -67,6 +67,7 @@ func _convert_around(p: Vector3i) -> void:
 	var soil := Reg.block("soil")
 	var grass := Reg.block("grass")
 	var tuft := Reg.block("earthgrass")
+	var water := Reg.block("water")
 	var convertible := {Reg.block("regolith"): true, Reg.block("moss"): true, Reg.block("dune_sand"): true, Reg.block("ash"): true, Reg.block("snow"): true, soil: true}
 	for k in 6:
 		var x := p.x + randi_range(-r, r)
@@ -78,6 +79,15 @@ func _convert_around(p: Vector3i) -> void:
 			continue
 		var id := world.get_block(x, top, z)
 		if convertible.has(id):
+			# Once water cycle is active, small depressions condense into natural pools
+			if float(stats.water) >= 0.45 and water > 0 and randf() < 0.08:
+				var n1 := world.column_top(x + 1, z)
+				var n2 := world.column_top(x - 1, z)
+				var n3 := world.column_top(x, z + 1)
+				var n4 := world.column_top(x, z - 1)
+				if n1 >= top and n2 >= top and n3 >= top and n4 >= top and world.get_block(x, top + 1, z) == 0:
+					world.set_block(x, top, z, water)
+					continue
 			world.set_block(x, top, z, grass if (id == soil or randf() < float(stats.life)) else soil)
 			if randf() < 0.25 and world.get_block(x, top + 1, z) == 0:
 				world.set_block(x, top + 1, z, tuft)

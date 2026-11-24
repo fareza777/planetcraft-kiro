@@ -148,5 +148,8 @@ func _process(_dt: float) -> void:
 		return
 	if session != null and is_instance_valid(session) and session.sky != null:
 		music.daylight = session.sky.daylight
+		if session.evolution != null:
+			music.terraformed = clampf(float(session.evolution.stats.get("atmo", 0.0)) * 0.5 + float(session.evolution.stats.get("life", 0.0)) * 0.5, 0.0, 1.0)
 	else:
 		music.daylight = 0.8
+		music.terraformed = 0.0

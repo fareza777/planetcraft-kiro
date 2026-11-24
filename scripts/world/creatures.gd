@@ -19,6 +19,7 @@ var player: Player
 var fx: Fx
 var sfx: Sfx
 var sky: SkyController
+var evolution: Evolution
 var planet: Dictionary
 var gravity := 9.0
 var cap := 12
@@ -103,7 +104,11 @@ func _try_spawn() -> void:
 			wild += 1
 	if wild >= cap:
 		return
-	var table: Array = planet.get("creatures", [])
+	var table: Array = planet.get("creatures", []).duplicate()
+	# Living terraformed worlds attract peaceful grazers & gliders
+	if evolution != null and float(evolution.stats.get("life", 0.0)) >= 0.4:
+		table.append({"id": "mossback", "w": 2.5})
+		table.append({"id": "glider", "w": 2.0})
 	if table.is_empty():
 		return
 	var night := sky.is_night()
@@ -162,6 +167,8 @@ func _check_boss() -> void:
 
 func _process(dt: float) -> void:
 	if player == null:
+		return
+	if player.hitstop_t > 0.0:
 		return
 	dt = minf(dt, 0.05)
 	spawn_t -= dt
@@ -248,6 +255,34 @@ func laser_tick(dt: float, dmg: float) -> Creature:
 	return c
 
 
+## Subtle ranged aim assist (especially helpful on touch screens). Steers shots slightly
+## toward the closest living creature inside a narrow aim cone.
+func _aim_assist_dir(origin: Vector3, dir: Vector3) -> Vector3:
+	if not Game.settings.get("aim_assist", true):
+		return dir
+	var min_dot := 0.955 if Game.settings.get("touch", false) else 0.985
+	var best_dir := dir
+	var best_score := min_dot
+	for c in list:
+		if not is_instance_valid(c) or not c.alive or c.tamed:
+			continue
+		var tgt := c.center()
+		var to := tgt - origin
+		var dist := to.length()
+		if dist < 1.2 or dist > 34.0:
+			continue
+		var nd := to / dist
+		var dp := nd.dot(dir)
+		if dp > best_score:
+			best_score = dp
+			# Aim toward weakpoint if player's crosshair is already close to it
+			var wp := c.weakpoint_pos()
+			var wnd := (wp - origin).normalized()
+			best_dir = wnd if wnd.dot(dir) > 0.988 else nd
+	var blend := 0.72 if Game.settings.get("touch", false) else 0.45
+	return dir.lerp(best_dir, blend).normalized()
+
+
 ## Called by the player while "mine" is held with a weapon selected.
 func fire_weapon(it: Dictionary) -> void:
 	if _fire_cd > 0.0:
@@ -261,6 +296,7 @@ func fire_weapon(it: Dictionary) -> void:
 	_fire_cd = float(w.get("rate", 0.4))
 	player.stats.energy -= cost
 	player.recoil(0.06 if not w.get("melee", false) else 0.12)
+	var base_dmg := float(w.dmg) * player.dmg_mult
 	if w.get("melee", false):
 		sfx.play("swing", -2.0)
 		player.swing()
@@ -270,26 +306,39 @@ func fire_weapon(it: Dictionary) -> void:
 				continue
 			var to := c.center() - player.eye_pos()
 			if to.length() < 3.2 + c.half and to.normalized().dot(player.look_dir()) > 0.45:
-				_damage_creature(c, float(w.dmg), Color(0.6, 0.95, 1.0))
+				var aim_pt := player.eye_pos() + player.look_dir() * to.length()
+				_damage_creature(c, base_dmg, Color(0.6, 0.95, 1.0), aim_pt)
 				hit_any = true
 		if hit_any:
-			player.shake(0.15)
+			player.shake(0.16)
 		return
-	var dir := player.look_dir()
+	var dir := _aim_assist_dir(player.eye_pos(), player.look_dir())
 	var from := player.hand.global_position + dir * 0.4
 	var col := Color.html(w.get("color", "#4fe3ff"))
-	_spawn_proj(from, dir * float(w.get("speed", 40.0)), float(w.dmg), "player", col, float(w.get("splash", 0.0)))
+	_spawn_proj(from, dir * float(w.get("speed", 40.0)), base_dmg, "player", col, float(w.get("splash", 0.0)))
 	sfx.play("shoot_heavy" if w.has("splash") else "shoot", -4.0)
 
 
-func _damage_creature(c: Creature, dmg: float, col: Color) -> void:
-	var crit := randf() < 0.12
-	var d := dmg * (2.0 if crit else 1.0)
-	c.hit(d, player.global_position)
+func _damage_creature(c: Creature, dmg: float, col: Color, hit_pos := Vector3.INF) -> void:
+	var weak := hit_pos != Vector3.INF and c.is_weakpoint_hit(hit_pos)
+	var crit := weak or randf() < 0.12
+	var mult := 2.2 if weak else (1.75 if crit else 1.0)
+	var d := dmg * mult
+	var knock := 1.45 if weak else (1.2 if crit else 1.0)
+	if weak:
+		c.stagger_t = maxf(c.stagger_t, 0.28)
+		c.telegraph_t = 0.0
+		c.telegraph_kind = ""
+	c.hit(d, player.global_position, knock)
 	if Game.settings.get("damage_numbers", true):
-		fx.number(c.center() + Vector3(0, c.height * 0.5, 0), ("%d!" % int(d)) if crit else str(int(d)), Color(1, 0.85, 0.3) if crit else Color.WHITE)
-	fx.sparks(c.center(), col, 8)
-	sfx.play("hit", -3.0)
+		var num_col := Color(1.0, 0.62, 0.15) if weak else (Color(1.0, 0.9, 0.35) if crit else Color.WHITE)
+		var txt := ("CRIT %d!" % int(d)) if weak else (("%d!" % int(d)) if crit else str(int(d)))
+		fx.number((hit_pos if hit_pos != Vector3.INF else c.center()) + Vector3(0, 0.4, 0), txt, num_col)
+	fx.sparks(hit_pos if hit_pos != Vector3.INF else c.center(), Color(1.0, 0.85, 0.25) if weak else col, 14 if weak else 8)
+	sfx.play("hit", -1.0 if weak else -3.0, 1.35 if weak else 1.0)
+	if weak:
+		player.trigger_hitstop(0.045)
+		player.shake(0.14)
 
 
 func try_tame() -> bool:
@@ -347,8 +396,8 @@ func _update_projectiles(dt: float) -> void:
 			fx.sparks(old, p.col, 6)
 		if not done and p.owner == "player":
 			for c in list:
-				if is_instance_valid(c) and c.alive and not c.tamed and c.center().distance_to(np) < maxf(c.half, 0.4) + 0.45 + c.height * 0.2:
-					_damage_creature(c, p.dmg, p.col)
+				if is_instance_valid(c) and c.alive and not c.tamed and (c.center().distance_to(np) < maxf(c.half, 0.4) + 0.45 + c.height * 0.2 or c.is_weakpoint_hit(np)):
+					_damage_creature(c, p.dmg, p.col, np)
 					done = true
 					break
 		elif not done and p.owner == "enemy" and np.distance_to(pc) < 0.8:
@@ -360,7 +409,7 @@ func _update_projectiles(dt: float) -> void:
 				sfx.play("explode", -2.0)
 				for c in list:
 					if is_instance_valid(c) and c.alive and not c.tamed and c.center().distance_to(np) < p.splash + c.half:
-						_damage_creature(c, p.dmg * 0.6, p.col)
+						_damage_creature(c, p.dmg * 0.6, p.col, np)
 				player.shake(0.25)
 			mi.visible = false
 		else:
@@ -374,6 +423,11 @@ func _on_attack_player(c: Creature, dmg: float) -> void:
 
 
 func _hurt_player(dmg: float, reason: String) -> void:
+	if player.is_dashing():
+		sfx.play("swing", -6.0, 1.5)
+		fx.sparks(player.global_position + Vector3(0, 1.0, 0), Color(0.35, 0.95, 1.0), 8)
+		player.toast.emit("DODGED!", Color(0.35, 0.95, 1.0))
+		return
 	Platform.vibrate(45)
 	player.stats.damage(dmg, reason)
 	player.shake(0.35)
@@ -383,6 +437,8 @@ func _hurt_player(dmg: float, reason: String) -> void:
 # ---------------------------------------------------------------- death and loot
 
 func _on_died(c: Creature) -> void:
+	player.trigger_hitstop(0.055)
+	player.shake(0.22 if c.def.get("elite", false) or c.def.get("boss", false) else 0.1)
 	fx.explosion(c.center(), Color.html(c.def.c[2]))
 	fx.debris(Vector3i(c.center().floor()), Color.html(c.def.c[0]))
 	sfx.play_at("die", c.global_position, player.global_position, 0.0, 1.0 / sqrt(c.size))
@@ -392,6 +448,8 @@ func _on_died(c: Creature) -> void:
 		if n > 0:
 			items.append([d[0], n])
 	var elite: bool = c.def.get("elite", false)
+	if elite:
+		Game.unlock_achievement("elite_hunter")
 	var mult := float(Reg.loot.get("elite", {}).get("rare_mult", 4.0)) if elite else 1.0
 	for r in c.def.get("rare", []):
 		if randf() < float(r[1]) * mult:

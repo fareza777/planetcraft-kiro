@@ -25,6 +25,7 @@ var face_tiles := PackedInt32Array()
 var hardness := PackedFloat32Array()
 var tier := PackedByteArray()
 var light_radius := PackedFloat32Array()
+var shape := PackedByteArray()   # 0 = full cube, 1 = half slab, 2 = stairs
 
 var items: Dictionary = {}
 var item_order: Array = []
@@ -127,6 +128,7 @@ func _load_blocks() -> void:
 	face_tiles.resize(256 * 6)
 	hardness.resize(256)
 	light_radius.resize(256)
+	shape.resize(256)
 	for id in n:
 		var d: Dictionary = defs[id]
 		d["id"] = id
@@ -134,6 +136,8 @@ func _load_blocks() -> void:
 		block_ids[d.name] = id
 		var k: int = KIND_NAMES.get(d.get("kind", "opaque"), Kind.OPAQUE)
 		kind[id] = k
+		var sh: String = d.get("shape", "cube")
+		shape[id] = 1 if sh == "slab" else (2 if sh == "stairs" else 0)
 		var default_solid := k == Kind.OPAQUE or k == Kind.CUTOUT
 		solid[id] = 1 if d.get("solid", default_solid) else 0
 		emissive[id] = 1 if d.get("emissive", false) else 0

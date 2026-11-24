@@ -17,6 +17,15 @@ uniform float time_s = 0.0;
 uniform float storm = 0.0;
 uniform float clouds = 1.0;
 uniform vec3 storm_color : source_color = vec3(0.5, 0.4, 0.3);
+// terrain fog colour: the band just above/below the horizon fades into it so distant chunk
+// edges melt into the sky instead of ending in a hard line
+uniform vec3 fog_color : source_color = vec3(0.5, 0.4, 0.6);
+uniform float aurora = 0.0;
+uniform vec3 aurora_color : source_color = vec3(0.3, 1.0, 0.7);
+uniform float cloud_style = 0.0;
+uniform vec3 grade_tint : source_color = vec3(1.0);
+uniform float grade_sat = 1.0;
+uniform float grade_contrast = 1.0;
 
 float hash3(vec3 p) {
 	p = fract(p * 0.3183099 + vec3(0.1, 0.2, 0.3));
@@ -61,6 +70,24 @@ void sky() {
 		col += vec3(0.9, 0.95, 1.0) * step(0.9965, r) * tw * star_vis * 1.4;
 		float neb = vnoise(d.xz * 3.0 + d.y * 2.0);
 		col += vec3(0.35, 0.15, 0.55) * neb * neb * neb * star_vis * 0.5;
+		// shooting stars: a few short streaks per minute crossing a random sky patch
+		float slot = floor(time_s / 7.0);
+		float st = fract(time_s / 7.0);
+		vec3 a0 = normalize(vec3(hash3(vec3(slot, 1.0, 3.0)) - 0.5, 0.55 + hash3(vec3(slot, 2.0, 5.0)) * 0.4, hash3(vec3(slot, 4.0, 7.0)) - 0.5));
+		vec3 adir = normalize(cross(a0, vec3(0.3, 1.0, 0.2)));
+		vec3 head = normalize(a0 + adir * (st * 0.9));
+		float along = dot(d - head, -adir);
+		float across = length(cross(d - head, adir));
+		float streak = step(0.0, along) * smoothstep(0.18, 0.0, along) * smoothstep(0.0025, 0.0, across);
+		col += vec3(1.0, 0.95, 0.85) * streak * step(st, 0.22) * star_vis * 2.5;
+		// aurora curtains (cold worlds)
+		if (aurora > 0.01 && h > 0.05) {
+			vec2 ap = d.xz / (h + 0.25);
+			float band = sin(ap.x * 2.2 + sin(ap.y * 1.3 + time_s * 0.15) * 2.5 + time_s * 0.05);
+			float curtain = smoothstep(0.6, 1.0, band) * smoothstep(0.05, 0.3, h) * smoothstep(0.85, 0.35, h);
+			float ripple = 0.6 + 0.4 * sin(ap.x * 14.0 + time_s * 1.2);
+			col += mix(aurora_color, aurora_color.bgr, smoothstep(0.2, 0.7, h)) * curtain * ripple * aurora * star_vis * 0.7;
+		}
 	}
 	// companion planet with ring
 	vec3 md = normalize(moon_dir);
@@ -98,11 +125,22 @@ void sky() {
 	// cloud bands (not in space)
 	if (clouds > 0.5 && space < 0.5 && h > 0.02) {
 		vec2 cp = d.xz / (h + 0.15) * 1.5 + vec2(time_s * 0.01, 0.0);
+		// cloud_style: 0 = puffy, 1 = long streaks (hot/dusty worlds), 2 = thin icy wisps
+		if (cloud_style > 0.5) {
+			cp *= cloud_style > 1.5 ? vec2(0.6, 3.0) : vec2(0.45, 2.2);
+		}
 		float c = vnoise(cp) * 0.65 + vnoise(cp * 2.3) * 0.35;
-		c = smoothstep(0.55, 0.85, c) * smoothstep(0.02, 0.25, h);
+		c = smoothstep(cloud_style > 1.5 ? 0.62 : 0.55, 0.85, c) * smoothstep(0.02, 0.25, h);
 		vec3 cc = mix(horizon_color * 1.2, vec3(0.08, 0.06, 0.14), n);
 		col = mix(col, cc, c * 0.55);
 	}
 	col = mix(col, storm_color * (1.0 - n * 0.8), storm * 0.85);
+	if (space < 0.5) {
+		col = mix(col, fog_color, smoothstep(0.14, -0.02, h) * 0.9);
+	}
+	col *= grade_tint;
+	float gl = dot(col, vec3(0.299, 0.587, 0.114));
+	col = mix(vec3(gl), col, grade_sat);
+	col = max((col - 0.45) * grade_contrast + 0.45, vec3(0.0));
 	COLOR = col;
 }

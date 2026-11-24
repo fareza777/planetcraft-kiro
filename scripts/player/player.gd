@@ -17,7 +17,9 @@ const REACH := 6.0
 var world: VoxelWorld
 var inv := Inventory.new()
 var stats := Survival.new()
-var ctl := {"move": Vector2.ZERO, "look": Vector2.ZERO, "jump": false, "mine": false, "place": false, "sprint": false}
+var ctl := {"move": Vector2.ZERO, "look": Vector2.ZERO, "jump": false, "mine": false, "place": false, "hold_place": false, "sprint": false}
+var build_rot := 0   # 0=N, 1=E, 2=S, 3=W
+var blueprint: Array = []  # [{off: Vector3i, id: int}]
 var vel := Vector3.ZERO
 var yaw := 0.0
 var pitch := 0.0
@@ -46,6 +48,22 @@ var _recoil := 0.0
 var _step_d := 0.0
 var _dig_t := 0.0
 var snap_to_surface := true
+var hitstop_t := 0.0
+var _sway := Vector2.ZERO
+var _land_dip := 0.0
+var _laser_heat := 0.0
+var _heat_mat: StandardMaterial3D
+var _emitter_ring: Node3D
+var _jump_prev := false
+var _jump_tap_t := 0.0
+var _dash_cd := 0.0
+var _dash_t := 0.0
+var _base_fov := 72.0
+var _fov_kick := 0.0
+var speed_mult := 1.0
+var dmg_mult := 1.0
+var mine_mult := 1.0
+var dash_cost_mult := 1.0
 
 var cam: Camera3D
 var hand: Node3D
@@ -187,13 +205,39 @@ func _build_sleeve() -> void:
 func _build_tool_model(root: Node3D) -> void:
 	var suit: Array = Game.cosmetic("suit")
 	_build_sleeve()
-	root.add_child(_box(Vector3(0.11, 0.11, 0.42), suit[0], Vector3.ZERO))
-	root.add_child(_box(Vector3(0.13, 0.05, 0.2), suit[1], Vector3(0, 0.07, 0.05)))
-	root.add_child(_box(Vector3(0.06, 0.06, 0.1), suit[2], Vector3(0, 0.0, -0.25), true))
-	root.add_child(_box(Vector3(0.115, 0.02, 0.3), suit[2], Vector3(0, -0.058, -0.02), true))
-	root.add_child(_box(Vector3(0.08, 0.16, 0.08), Color("2a2f3c"), Vector3(0, -0.11, 0.12)))
+	# Main chassis & bevelled upper receiver
+	root.add_child(_box(Vector3(0.11, 0.10, 0.42), suit[0], Vector3.ZERO))
+	root.add_child(_box(Vector3(0.085, 0.04, 0.34), suit[0].lightened(0.18), Vector3(0, 0.062, -0.02)))
+	root.add_child(_box(Vector3(0.13, 0.045, 0.18), suit[1], Vector3(0, 0.055, 0.07)))
+	# Side armoured rails + energy core cell
+	root.add_child(_box(Vector3(0.022, 0.06, 0.28), suit[1].darkened(0.2), Vector3(-0.062, 0.0, -0.04)))
+	root.add_child(_box(Vector3(0.022, 0.06, 0.28), suit[1].darkened(0.2), Vector3(0.062, 0.0, -0.04)))
+	root.add_child(_box(Vector3(0.128, 0.024, 0.13), suit[2], Vector3(0, 0.01, -0.03), true))
+	root.add_child(_box(Vector3(0.115, 0.018, 0.30), suit[2], Vector3(0, -0.058, -0.02), true))
+	# Ergonomic grip & rear battery cap
+	root.add_child(_box(Vector3(0.075, 0.16, 0.08), Color("2a2f3c"), Vector3(0, -0.11, 0.12), false, Vector3(-0.22, 0, 0)))
+	root.add_child(_box(Vector3(0.09, 0.08, 0.05), suit[1].darkened(0.35), Vector3(0, 0.0, 0.22)))
+	# Heat-sink cooling fins that glow hotter while mining
+	_heat_mat = StandardMaterial3D.new()
+	_heat_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	_heat_mat.albedo_color = Color(0.25, 0.28, 0.34)
 	for k in 3:
-		root.add_child(_box(Vector3(0.02, 0.02, 0.06), suit[1].darkened(0.3), Vector3(0.0, 0.0, -0.33 - k * 0.0) + Vector3(cos(k * 2.1) * 0.035, sin(k * 2.1) * 0.035, 0)))
+		var fin := MeshInstance3D.new()
+		var fm := BoxMesh.new()
+		fm.size = Vector3(0.122, 0.018, 0.028)
+		fin.mesh = fm
+		fin.material_override = _heat_mat
+		fin.position = Vector3(0, 0.045, -0.11 - k * 0.055)
+		fin.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		root.add_child(fin)
+	# Emitter barrel & rotating focusing prongs
+	root.add_child(_box(Vector3(0.055, 0.055, 0.12), suit[2], Vector3(0, 0.0, -0.26), true))
+	_emitter_ring = Node3D.new()
+	_emitter_ring.position = Vector3(0, 0, -0.32)
+	root.add_child(_emitter_ring)
+	for k in 3:
+		var a := k * TAU / 3.0
+		_emitter_ring.add_child(_box(Vector3(0.02, 0.02, 0.07), suit[1].darkened(0.25), Vector3(cos(a) * 0.038, sin(a) * 0.038, 0)))
 
 
 var _beam_glow: MeshInstance3D
@@ -344,6 +388,20 @@ func look_dir() -> Vector3:
 	return -cam.global_transform.basis.z
 
 
+func trigger_hitstop(sec: float) -> void:
+	if not Game.settings.get("camera_shake", true):
+		return
+	hitstop_t = maxf(hitstop_t, clampf(sec, 0.0, 0.065))
+
+
+func dash_ready() -> bool:
+	return _dash_cd <= 0.0 and stats.energy >= 8.0 * dash_cost_mult
+
+
+func is_dashing() -> bool:
+	return _dash_t > 0.0
+
+
 func _process(dt: float) -> void:
 	if world == null:
 		return
@@ -352,6 +410,8 @@ func _process(dt: float) -> void:
 	ctl.look = Vector2.ZERO
 	yaw -= look.x
 	pitch = clampf(pitch - look.y, -1.52, 1.52)
+	_sway.x = clampf(_sway.x - look.x * 0.22, -0.075, 0.075)
+	_sway.y = clampf(_sway.y + look.y * 0.22, -0.065, 0.065)
 	rotation = Vector3(0, yaw, 0)
 	cam.rotation = Vector3(pitch, 0, 0)
 	if frozen:
@@ -362,6 +422,9 @@ func _process(dt: float) -> void:
 					global_position.y = top + 1.02
 				frozen = false
 				snap_to_surface = false
+		return
+	if hitstop_t > 0.0:
+		hitstop_t = maxf(0.0, hitstop_t - dt)
 		return
 	var was_ground := on_ground
 	var fall_v := vel.y
@@ -383,28 +446,45 @@ func recoil(a: float) -> void:
 	_recoil = minf(_recoil + a, 0.3)
 
 
+func _ground_color() -> Color:
+	var bid := world.get_block(floori(global_position.x), floori(global_position.y - 0.2), floori(global_position.z))
+	return Reg.block_color(bid) if bid > 0 else Color(0.55, 0.55, 0.6)
+
+
 func _update_feel(dt: float, was_ground: bool, fall_v: float) -> void:
 	_shake = maxf(0.0, _shake - dt * 1.8)
 	_recoil = move_toward(_recoil, 0.0, dt * 1.2)
+	_fov_kick = move_toward(_fov_kick, 0.0, dt * 24.0)
+	_land_dip = move_toward(_land_dip, 0.0, dt * 3.5)
+	_base_fov = float(Game.settings.get("fov", 72))
+	var sprint_fov := 3.5 if (ctl.sprint and Vector2(vel.x, vel.z).length() > 4.5) else 0.0
+	cam.fov = lerpf(cam.fov, _base_fov + sprint_fov + _fov_kick, minf(dt * 12.0, 1.0))
 	var off := Vector3(randf_range(-1, 1), randf_range(-1, 1), 0) * _shake * _shake * 0.25
-	cam.position = Vector3(0, EYE, 0) + off
+	cam.position = Vector3(0, EYE - _land_dip * 0.14, 0) + off
 	cam.rotation = Vector3(pitch + _recoil, 0, sin(Time.get_ticks_msec() * 0.03) * _shake * 0.03)
-	if sfx == null:
-		return
 	var hv := Vector2(vel.x, vel.z).length()
 	if on_ground and hv > 0.5:
 		_step_d += hv * dt
 		if _step_d > 2.1:
 			_step_d = 0.0
-			sfx.play("step", -14.0, 1.0, 0.2)
-	if not was_ground and on_ground and fall_v < -5.0:
-		sfx.play("land", -6.0)
+			if sfx != null:
+				sfx.play("step", -14.0, 1.0, 0.2)
+			if fx != null and not in_fluid:
+				fx.dust_step(global_position, _ground_color())
+	if not was_ground and on_ground and fall_v < -4.2:
+		var strength := clampf((-fall_v - 4.0) / 10.0, 0.2, 1.5)
+		_land_dip = minf(1.0, strength * 0.85)
+		if sfx != null:
+			sfx.play("land", -6.0)
+		if fx != null and not in_fluid:
+			fx.land_puff(global_position, _ground_color(), strength)
 		if fall_v < -11.0:
 			shake(0.3)
-	if was_ground and not on_ground and vel.y > 3.0:
+	if was_ground and not on_ground and vel.y > 3.0 and sfx != null:
 		sfx.play("jump", -12.0)
-	sfx.loop("jet", jet_active, -12.0, 1.0, dt)
-	sfx.loop("laser", beam.visible, -14.0, 1.0 + mine_progress * 0.3, dt)
+	if sfx != null:
+		sfx.loop("jet", jet_active, -12.0, 1.0, dt)
+		sfx.loop("laser", beam.visible, -14.0, 1.0 + mine_progress * 0.3, dt)
 
 
 func _physics(dt: float) -> void:
@@ -418,15 +498,44 @@ func _physics(dt: float) -> void:
 		mv = mv.normalized()
 	var fwd := Vector3(-sin(yaw), 0, -cos(yaw))
 	var right := Vector3(cos(yaw), 0, -sin(yaw))
-	var speed := 4.4
+	var speed := 4.4 * speed_mult
 	if ctl.sprint and on_ground:
-		speed = 6.6
+		speed = 6.6 * speed_mult
 	elif ctl.sprint:
-		speed = 6.0
+		speed = 6.0 * speed_mult
 	if in_fluid:
-		speed = 2.6
+		speed = 2.6 * speed_mult
+	_dash_cd = maxf(0.0, _dash_cd - dt)
+	_dash_t = maxf(0.0, _dash_t - dt)
+	_jump_tap_t = maxf(0.0, _jump_tap_t - dt)
+	var jump_edge: bool = ctl.jump and not _jump_prev
+	_jump_prev = ctl.jump
+	# Double-tap JUMP triggers a directional jetpack dash (dodge burst)
+	if jump_edge and not in_fluid and not noclip:
+		if _jump_tap_t > 0.0 and dash_ready():
+			var ddir := fwd * mv.y + right * mv.x
+			if ddir.length() < 0.1:
+				ddir = fwd
+			ddir = ddir.normalized()
+			var dash_spd := 14.5 if stats.upgrades.has("jet") else 12.5
+			vel.x = ddir.x * dash_spd
+			vel.z = ddir.z * dash_spd
+			vel.y = maxf(vel.y, 2.4)
+			stats.energy = maxf(0.0, stats.energy - 8.0 * dash_cost_mult)
+			_dash_cd = 1.05
+			_dash_t = 0.22
+			_jump_tap_t = 0.0
+			_fov_kick = 8.0
+			shake(0.14)
+			Platform.vibrate(18)
+			if sfx != null:
+				sfx.play("jet", -3.0, 1.55)
+			if fx != null:
+				fx.dash_burst(global_position + Vector3(0, 0.9, 0), Color.html(Game.equipped_def("suit").get("trail", "#ffb02e")))
+		else:
+			_jump_tap_t = 0.28
 	var wish := (fwd * mv.y + right * mv.x) * speed
-	var accel := 16.0 if on_ground else 5.0
+	var accel := (16.0 if on_ground else 5.0) if _dash_t <= 0.0 else 1.2
 	vel.x = move_toward(vel.x, wish.x, accel * speed * dt)
 	vel.z = move_toward(vel.z, wish.z, accel * speed * dt)
 	jet_active = false
@@ -585,14 +694,16 @@ func _update_mining(dt: float) -> void:
 		_toast_once("Suit energy depleted", Color(1, 0.6, 0.3))
 		return
 	stats.energy = maxf(0.0, stats.energy - 0.6 * dt)
-	mine_progress += dt * float(tool.speed) / maxf(hard, 0.05)
+	mine_progress += dt * float(tool.speed) * mine_mult / maxf(hard, 0.05)
 	_dig_t -= dt
 	if _dig_t <= 0.0:
 		_dig_t = 0.16
 		if sfx != null:
 			sfx.play("dig", -12.0, 0.8 + 0.4 / maxf(hard, 0.3))
 		if fx != null:
-			fx.chips(Vector3(p) + Vector3(0.5, 0.5, 0.5) + Vector3(target.normal) * 0.52, Reg.block_color(id))
+			var hit_pt := Vector3(p) + Vector3(0.5, 0.5, 0.5) + Vector3(target.normal) * 0.52
+			fx.chips(hit_pt, Reg.block_color(id))
+			fx.sparks(hit_pt, Game.cosmetic("laser")[0], 4)
 	crack.visible = true
 	crack.global_position = Vector3(p) + Vector3(0.5, 0.5, 0.5)
 	_crack_mat.albedo_color = Color(1, 1, 1, clampf(mine_progress * 1.3, 0.0, 0.9))
@@ -607,11 +718,13 @@ func _update_mining(dt: float) -> void:
 					toast.emit("Inventory full", Color(1, 0.5, 0.4))
 			xp += int(Reg.block_def(id).get("xp", 0))
 			if fx != null:
-				fx.debris(p, Reg.block_color(id))
+				fx.block_debris(p, id)
 			if sfx != null:
 				sfx.play("break_crystal" if Reg.emissive[id] == 1 and Reg.kind[id] == Reg.Kind.CUTOUT else "break", -6.0)
-			shake(0.06)
-			Platform.vibrate(12)
+			shake(0.06 if hard < 1.4 else 0.12)
+			if hard >= 1.4:
+				trigger_hitstop(0.042)
+			Platform.vibrate(12 if hard < 1.4 else 22)
 			block_mined.emit(p, id)
 			# plants on top fall with the block
 			var above := world.get_block(p.x, p.y + 1, p.z)
@@ -677,13 +790,76 @@ func _beam_to(to: Vector3) -> void:
 
 func _update_place(dt: float) -> void:
 	_place_cd -= dt
-	if not ctl.place:
+	if not ctl.place and not ctl.get("hold_place", false):
 		return
+	var was_tap: bool = ctl.place
 	ctl.place = false
 	if _place_cd > 0.0:
 		return
-	_place_cd = 0.18
-	use_requested.emit()
+	_place_cd = 0.19 if was_tap else 0.22
+	if was_tap:
+		use_requested.emit()
+	elif selected_item().get("type", "") == "block":
+		use_selected()
+
+
+func rotate_build() -> String:
+	build_rot = posmod(build_rot + 1, 4)
+	return ["North", "East", "South", "West"][build_rot]
+
+
+func copy_blueprint() -> int:
+	if target.is_empty():
+		toast.emit("Aim at a structure to copy a 3×3×3 blueprint", Color(1, 0.8, 0.3))
+		return 0
+	var c: Vector3i = target.pos
+	blueprint.clear()
+	for dy in range(0, 3):
+		for dz in range(-1, 2):
+			for dx in range(-1, 2):
+				var id := world.get_block(c.x + dx, c.y + dy, c.z + dz)
+				if id > 0 and Reg.block_def(id).get("place", true):
+					blueprint.append({"off": Vector3i(dx, dy, dz), "id": id})
+	toast.emit("Blueprint copied (%d blocks). Press V to paste." % blueprint.size(), Color(0.35, 0.92, 1.0))
+	return blueprint.size()
+
+
+func paste_blueprint() -> int:
+	if blueprint.is_empty():
+		toast.emit("No blueprint copied yet (aim & press B to copy)", Color(1, 0.8, 0.3))
+		return 0
+	if target.is_empty():
+		return 0
+	var origin: Vector3i = target.pos + target.normal
+	var placed := 0
+	for entry in blueprint:
+		var o: Vector3i = entry.off
+		var r := o
+		match build_rot:
+			1: r = Vector3i(-o.z, o.y, o.x)
+			2: r = Vector3i(-o.x, o.y, -o.z)
+			3: r = Vector3i(o.z, o.y, -o.x)
+		var dest := origin + r
+		var bid: int = entry.id
+		var item_name: String = Reg.block_def(bid).name
+		if inv.count(item_name) <= 0:
+			continue
+		var cur := world.get_block(dest.x, dest.y, dest.z)
+		if cur != 0 and Reg.kind[cur] != Reg.Kind.FLUID and Reg.kind[cur] != Reg.Kind.PLANT:
+			continue
+		if Reg.solid[bid] == 1 and _overlaps_player(dest):
+			continue
+		if world.set_block(dest.x, dest.y, dest.z, bid):
+			inv.remove(item_name, 1)
+			block_placed.emit(dest, bid)
+			placed += 1
+	if placed > 0:
+		if sfx != null:
+			sfx.play("place", -4.0)
+		toast.emit("Blueprint pasted (%d blocks)" % placed, Color(0.45, 1.0, 0.6))
+	else:
+		toast.emit("Need matching blocks in inventory to paste blueprint", Color(1, 0.6, 0.3))
+	return placed
 
 
 ## Uses the selected hotbar item: place a block, eat/drink, or interact.
@@ -743,15 +919,35 @@ func _update_hand(dt: float) -> void:
 	_held.visible = not mining_now
 	if not beam.visible:
 		_impact.visible = false
-	_jet_fx.emitting = jet_active
+	_jet_fx.emitting = jet_active or _dash_t > 0.0
 	_swing = maxf(0.0, _swing - dt * 4.0)
-	hand.rotation = Vector3(-sin(_swing * PI) * 0.9, sin(_swing * PI) * 0.5, 0)
+	_sway = _sway.lerp(Vector2.ZERO, minf(dt * 10.0, 1.0))
+	# Laser heat buildup while firing beam -> fins glow warm orange-red and emitter spins
+	_laser_heat = clampf(_laser_heat + (dt * 0.85 if beam.visible else -dt * 0.55), 0.0, 1.0)
+	if _heat_mat != null:
+		var cool := Color(0.25, 0.28, 0.34)
+		var hot := Color(1.7, 0.55, 0.15)
+		_heat_mat.albedo_color = cool.lerp(hot, _laser_heat * _laser_heat)
+	if _emitter_ring != null:
+		_emitter_ring.rotation.z += dt * (2.0 + _laser_heat * 18.0) if (beam.visible or _laser_heat > 0.05) else 0.0
+	var right_v := Vector3(cos(yaw), 0, -sin(yaw))
+	var strafe := clampf(vel.dot(right_v) * 0.012, -0.08, 0.08)
+	hand.rotation = Vector3(-sin(_swing * PI) * 0.9 - _sway.y * 1.4 + _recoil * 0.8, sin(_swing * PI) * 0.5 + _sway.x * 1.6, -strafe)
 	var moving: bool = Vector2(vel.x, vel.z).length() > 0.5 and on_ground
 	if moving:
-		_bob += dt * 9.0
+		_bob += dt * (11.0 if ctl.sprint else 9.0)
 	var bob := Vector3(cos(_bob) * 0.012, absf(sin(_bob)) * 0.018, 0) if moving else Vector3.ZERO
 	var kick := Vector3(0, 0, 0.03 * sin(Time.get_ticks_msec() * 0.06)) if beam.visible else Vector3.ZERO
-	hand.position = Vector3(0.32, -0.3, -0.55) + bob + kick
+	var sway_off := Vector3(_sway.x * 0.45, -_sway.y * 0.35 - _land_dip * 0.05, _recoil * 0.18)
+	hand.position = Vector3(0.32, -0.3, -0.55) + bob + kick + sway_off
+
+
+func apply_modules() -> void:
+	var m := stats.recalc_caps()
+	speed_mult = float(m.speed)
+	dmg_mult = float(m.dmg)
+	mine_mult = float(m.mine)
+	dash_cost_mult = float(m.dash)
 
 
 func respawn(pos: Vector3) -> void:

@@ -12,6 +12,7 @@ const AUTOSAVE_S := 60.0
 
 var planet: Dictionary
 var world: VoxelWorld
+var far_lod: FarLod
 var sky: SkyController
 var player: Player
 var machines: Machines
@@ -30,6 +31,7 @@ var inv_screen: InventoryScreen
 var pause_menu: PauseMenu
 var machine_panel: MachinePanel
 var dialog: DialogPanel
+var map_screen: MapScreen
 var npcs: Npcs
 var loading: Control
 var fade: ColorRect
@@ -53,6 +55,19 @@ var _ship_models: Dictionary = {}
 var use_touch := true
 var bot_driven := false
 var _base_sky: Dictionary = {}
+var _seen_stations: Dictionary = {}
+var _seen_ready_recipes: Dictionary = {}
+var _idle_hint_t := 0.0
+var _last_quest_idx := -1
+var _last_quest_prog := -1
+var _scan_t := 0.0
+var _scan_cd := 0.0
+var _scan_origin := Vector3.ZERO
+var _cutscene_t := 0.0
+var _atmo_cutscene_done := false
+var explored_chunks: Dictionary = {}   # Vector2i -> Color
+var discovered_pois: Dictionary = {}   # String key -> {pos: Vector3, label: String, col: Color}
+var custom_waypoint: Variant = null
 
 
 ## mode: "new" (fresh game), "continue" (load save), "arrive" (landed after a jump)
@@ -73,6 +88,9 @@ func start(pid: String, start_mode: String) -> void:
 	add_child(world)
 	world.setup(planet, Game.world_seed, mods)
 	world.block_changed.connect(_on_block_changed)
+	far_lod = FarLod.new()
+	add_child(far_lod)
+	far_lod.setup(world.gen, planet)
 	sky = SkyController.new()
 	add_child(sky)
 	sky.setup(planet, world.materials(), Game.settings.glow)
@@ -81,6 +99,8 @@ func start(pid: String, start_mode: String) -> void:
 	machines = Machines.new()
 	machines.world = world
 	machines.sky = sky
+	machines.fx = fx
+	machines.sfx = sfx
 	add_child(machines)
 	machines.rebuild(mods, _state)
 	machines.produced.connect(func(t: String) -> void: hud.toast(t, TF.AMBER))
@@ -102,11 +122,24 @@ func start(pid: String, start_mode: String) -> void:
 	creatures = Creatures.new()
 	add_child(creatures)
 	creatures.setup(world, player, fx, sfx, sky, planet)
+	creatures.evolution = evolution
 	creatures.boss_done = _state.get("boss_done", false)
-	creatures.killed.connect(func(id: String) -> void: quests.event("kill", id))
-	creatures.tamed_creature.connect(func(id: String) -> void: quests.event("tame", id))
+	creatures.killed.connect(func(id: String) -> void:
+		quests.event("kill", id)
+		Game.unlock_achievement("first_kill")
+		Game.record_daily("kill", 1)
+		if id == "cryo_titan" or id == "void_guardian":
+			Game.unlock_achievement("boss_slayer"))
+	creatures.tamed_creature.connect(func(id: String) -> void:
+		quests.event("tame", id)
+		Game.unlock_achievement("tamer"))
 	creatures.boss_defeated.connect(_on_boss_defeated)
+	if not Game.achievement_unlocked.is_connected(_on_achievement):
+		Game.achievement_unlocked.connect(_on_achievement)
+	if not Game.daily_completed.is_connected(_on_daily_done):
+		Game.daily_completed.connect(_on_daily_done)
 	player.combat = creatures
+	machines.creatures = creatures
 	events = WorldEvents.new()
 	add_child(events)
 	events.setup(world, sky, fx, sfx, player, planet, evolution)
@@ -144,6 +177,7 @@ func _load_player() -> void:
 	player.inv.from_data(pd.get("inv", []))
 	player.stats.from_data(pd.get("stats", {}))
 	player.stats.apply_upgrades(pd.get("upgrades", {}))
+	player.apply_modules()
 	player.xp = pd.get("xp", 0)
 	ship = m.get("ship", ship)
 	quests.from_data(m.get("quests", {}))
@@ -167,6 +201,12 @@ func _load_player() -> void:
 		creatures.spawn(pet.id, pet.pos + Vector3(0, 0.5, 0), true)
 	if _state.has("rover"):
 		_spawn_rover(_state.rover)
+	if _state.has("explored"):
+		explored_chunks = _state.explored.duplicate()
+	if _state.has("pois"):
+		discovered_pois = _state.pois.duplicate(true)
+	if _state.has("custom_wp"):
+		custom_waypoint = _state.custom_wp
 
 
 func _find_spawn() -> Vector3:
@@ -288,6 +328,13 @@ func _build_ui() -> void:
 	dialog.closed.connect(_on_modal_closed)
 	dialog.talked.connect(func(id: String) -> void: quests.event("talk", id))
 	root.add_child(dialog)
+	map_screen = MapScreen.new()
+	map_screen.visible = false
+	map_screen.closed.connect(_on_modal_closed)
+	map_screen.waypoint_set.connect(func(wp: Variant) -> void:
+		custom_waypoint = wp
+		_update_waypoint())
+	root.add_child(map_screen)
 	pause_menu = PauseMenu.new()
 	pause_menu.visible = false
 	pause_menu.action.connect(_on_pause_action)
@@ -315,13 +362,17 @@ func _apply_settings() -> void:
 	hud.info.show_fps = Game.settings.show_fps
 	sky.env.glow_enabled = Game.settings.glow
 	sky.sky_mat.set_shader_parameter("clouds", 1.0 if Game.settings.clouds else 0.0)
+	sky.refresh_grade()
 	Game.apply_render_scale()
 	var rd := int(Game.settings.render_distance)
+	var lod_on: bool = Game.settings.get("far_lod", true)
+	player.cam.far = maxf(rd * 16.0 + 32.0, 260.0 if lod_on else 120.0)
 	if rd != world.radius:
 		world.radius = rd
 		world._center = Vector2i(1 << 30, 1 << 30)
 		sky.set_view_distance(rd * 16.0)
-		player.cam.far = rd * 16.0 + 32.0
+	if far_lod != null:
+		far_lod._last_center = Vector2i(1 << 30, 1 << 30)
 
 
 # ------------------------------------------------------------------ frame
@@ -367,6 +418,8 @@ func _process(dt: float) -> void:
 	evolution.tick(dt)
 	_update_environment(dt)
 	_update_lights(dt)
+	_update_scan(dt)
+	_update_cutscene(dt)
 	_update_death(dt)
 	_update_travel(dt)
 	fx.follow(player.global_position, sky.is_night())
@@ -390,10 +443,65 @@ func _slow_update() -> void:
 		sky._c[k] = c[k]
 	if float(evolution.stats.atmo) >= 1.0:
 		quests.event("stat", "atmo")
+		if not _atmo_cutscene_done and float(planet.get("o2", 0.0)) < 1.0:
+			_atmo_cutscene_done = true
+			_play_terraform_cutscene()
 	if float(evolution.stats.life) >= 1.0:
 		quests.event("stat", "life")
+	if far_lod != null:
+		var amb_l := sky.env.ambient_light_color + sky.sun.light_color * 0.55
+		far_lod.update_around(player.global_position, world.radius * 16.0, amb_l)
+	var sel_it := player.selected_item()
+	if sel_it.get("type", "") == "block" and not use_touch:
+		var rot_lbl: String = ["N", "E", "S", "W"][player.build_rot]
+		var bp_lbl := (" · BP:%d (V paste)" % player.blueprint.size()) if not player.blueprint.is_empty() else " · B copy"
+		hud.info.build_hint = "Hold RMB continuous · R rot:%s%s" % [rot_lbl, bp_lbl]
+	else:
+		hud.info.build_hint = ""
 	_update_ship_models()
+	_update_map_and_pois()
 	_update_waypoint()
+	_check_unlocks_and_hints()
+
+
+func _check_unlocks_and_hints() -> void:
+	# Station & recipe unlock toasts
+	var near_st := machines.stations_near(player.global_position, 5.5)
+	for st in near_st:
+		if not _seen_stations.has(st):
+			_seen_stations[st] = true
+			var cnt := 0
+			for r in Reg.recipes:
+				if r.get("station", "hand") == st:
+					cnt += 1
+			hud.toast("★ STATION ONLINE · %s (%d recipes unlocked)" % [Reg.item_label(st), cnt], TF.CYAN)
+			sfx.play("quest", -6.0, 1.2)
+	for r in Reg.recipes:
+		var out_id: String = r.out
+		if _seen_ready_recipes.has(out_id):
+			continue
+		var st: String = r.get("station", "hand")
+		if (st == "hand" or near_st.has(st)) and player.inv.can_craft(r):
+			_seen_ready_recipes[out_id] = true
+			if _seen_ready_recipes.size() > 3:
+				hud.toast("NEW RECIPE READY · %s (BAG → Fabricate)" % Reg.item_label(out_id), TF.GREEN)
+				break
+	# Idle next-step hint if player has not progressed the current directive for > 2 minutes
+	var qi := quests.index
+	var qp := quests.progress
+	if qi != _last_quest_idx or qp != _last_quest_prog:
+		_last_quest_idx = qi
+		_last_quest_prog = qp
+		_idle_hint_t = 0.0
+	else:
+		_idle_hint_t += 1.0
+		if _idle_hint_t >= 120.0:
+			_idle_hint_t = 0.0
+			var q := quests.current()
+			if not q.is_empty():
+				hud.toast("ECHO HINT · Next step: %s — %s" % [q.title, q.text], TF.AMBER)
+			elif Game.pinned_recipe != "":
+				hud.toast("ECHO HINT · Gather ingredients for pinned %s (use SCAN to locate ores)" % Reg.item_label(Game.pinned_recipe), TF.AMBER)
 
 
 ## Nearest block of `id` around the player, using the native PackedByteArray.find over the
@@ -440,7 +548,156 @@ func _blocks_for(goal: Dictionary) -> Array:
 	return out
 
 
+func _update_map_and_pois() -> void:
+	var pp := player.global_position
+	var ck := Vector2i(floori(pp.x) >> 4, floori(pp.z) >> 4)
+	for dz in range(-2, 3):
+		for dx in range(-2, 3):
+			var k := ck + Vector2i(dx, dz)
+			if not explored_chunks.has(k) and world.chunks.has(k):
+				var cx := k.x * 16 + 8
+				var cz := k.y * 16 + 8
+				var top := world.column_top(cx, cz)
+				var bid := world.get_block(cx, top, cz) if top > 0 else 0
+				var c := Reg.block_color(bid) if bid > 0 else Color(0.18, 0.24, 0.32)
+				explored_chunks[k] = Color(c.r * 0.72, c.g * 0.72, c.b * 0.72, 0.85)
+	if not discovered_pois.has("pod"):
+		discovered_pois["pod"] = {"pos": spawn_point, "label": "Landing Site", "col": TF.CYAN}
+	if npcs != null:
+		for n in npcs.list:
+			if is_instance_valid(n):
+				var key := "npc_" + String(n.def.id)
+				if not discovered_pois.has(key) and n.global_position.distance_to(pp) < 80.0:
+					discovered_pois[key] = {"pos": n.global_position, "label": String(n.def.name), "col": TF.GREEN}
+	for p in machines.positions("launchpad"):
+		discovered_pois["pad_%d_%d" % [p.x, p.z]] = {"pos": Vector3(p), "label": "Launch Pad", "col": TF.AMBER}
+	var poi_blocks := [
+		["ruin_cache", "Precursor Ruin", Color(0.4, 0.9, 1.0)],
+		["obelisk_core", "Obelisk Trial", Color(0.85, 0.55, 1.0)],
+		["shrine_altar", "Starfall Shrine", Color(1.0, 0.85, 0.35)],
+		["hive_core", "Alien Hive", Color(1.0, 0.35, 0.65)],
+		["dungeon_gate", "Underground Vault", Color(0.35, 0.95, 0.9)],
+	]
+	for pb in poi_blocks:
+		var bid := Reg.block(pb[0])
+		if bid <= 0:
+			continue
+		var hit = _nearest_block([bid], 6)
+		if hit != null:
+			var p3: Vector3 = hit
+			var pk := "%s_%d_%d" % [pb[0], int(p3.x / 32.0), int(p3.z / 32.0)]
+			if not discovered_pois.has(pk):
+				discovered_pois[pk] = {"pos": p3, "label": pb[1], "col": pb[2]}
+				hud.toast("POI DISCOVERED · %s" % pb[1], pb[2])
+	var cr_list := []
+	for c in creatures.list:
+		if is_instance_valid(c) and c.alive:
+			var rel := Vector2(c.global_position.x - pp.x, c.global_position.z - pp.z)
+			if rel.length() < 64.0:
+				var col := TF.GREEN if (c.tamed or c.def.get("behavior", "") == "passive") else (TF.AMBER if c.def.get("elite", false) or c.def.get("boss", false) else TF.RED)
+				cr_list.append({"rel": rel, "col": col})
+	hud.minimap_data = {"pois": discovered_pois.values(), "creatures": cr_list, "custom_wp": custom_waypoint}
+
+
+func trigger_scan() -> void:
+	if _scan_cd > 0.0:
+		hud.toast("Scanner recharging (%.0fs)" % ceilf(_scan_cd), TF.DIM)
+		return
+	if player.stats.energy < 4.0:
+		hud.toast("Scanner needs 4 suit energy", TF.AMBER)
+		return
+	player.stats.energy -= 4.0
+	_scan_cd = 8.0
+	_scan_t = 2.0
+	_scan_origin = player.eye_pos()
+	sfx.play("quest", -4.0, 1.45)
+	Platform.vibrate(20)
+	hud.scan_pings.clear()
+	var pp := player.global_position
+	var ore_names := ["ferrite_ore", "cuprite_ore", "aurium_ore", "titan_ore", "uranite_ore", "meteorite", "lumen_crystal", "void_crystal", "ember_crystal"]
+	var poi_names := ["ruin_cache", "obelisk_core", "shrine_altar", "hive_core", "trial_chest", "dungeon_gate", "dungeon_chest"]
+	Game.unlock_achievement("scanner_pro")
+	Game.record_daily("scan", 1)
+	var ore_ids := {}
+	var poi_ids := {}
+	for n in ore_names:
+		var bid := Reg.block(n)
+		if bid > 0:
+			ore_ids[bid] = Reg.block_def(bid).label
+	for n in poi_names:
+		var bid := Reg.block(n)
+		if bid > 0:
+			poi_ids[bid] = Reg.block_def(bid).label
+	var c := Vector2i(floori(pp.x) >> 4, floori(pp.z) >> 4)
+	var best_by_label := {}
+	for dz in range(-2, 3):
+		for dx in range(-2, 3):
+			var col = world.chunks.get(c + Vector2i(dx, dz))
+			if col == null:
+				continue
+			var blocks: PackedByteArray = col.blocks
+			for bid in ore_ids.keys() + poi_ids.keys():
+				var i := blocks.find(bid)
+				var hits := 0
+				while i >= 0 and hits < 25:
+					hits += 1
+					var y := i % 128
+					var lx := (i / 128) % 16
+					var lz := i / 2048
+					var wp := Vector3(col.key.x * 16 + lx + 0.5, y + 0.5, col.key.y * 16 + lz + 0.5)
+					var d := wp.distance_to(pp)
+					if d <= 26.0:
+						var is_poi: bool = poi_ids.has(bid)
+						var lbl: String = poi_ids[bid] if is_poi else ore_ids[bid]
+						var key := "%s_%d_%d" % [lbl, int(wp.x / 6.0), int(wp.z / 6.0)]
+						if not best_by_label.has(key) or d < float(best_by_label[key].d):
+							best_by_label[key] = {"pos": wp, "label": lbl, "col": TF.AMBER if is_poi else TF.CYAN, "time": 7.5, "d": d}
+					i = blocks.find(bid, i + 1)
+	var pings := best_by_label.values()
+	pings.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return float(a.d) < float(b.d))
+	for idx in mini(pings.size(), 12):
+		hud.scan_pings.append(pings[idx])
+	for cr in creatures.list:
+		if is_instance_valid(cr) and cr.alive and not cr.tamed and cr.global_position.distance_to(pp) <= 28.0:
+			var col := TF.AMBER if (cr.def.get("elite", false) or cr.def.get("boss", false)) else (TF.RED if cr.def.get("behavior", "") != "passive" else TF.GREEN)
+			hud.scan_pings.append({"pos": cr.center(), "label": String(cr.def.name), "col": col, "time": 7.0})
+	hud.toast("SCANNER PULSE · %d signals detected within 26m" % hud.scan_pings.size(), TF.CYAN)
+
+
+func _update_scan(dt: float) -> void:
+	_scan_cd = maxf(0.0, _scan_cd - dt)
+	if _scan_t <= 0.0:
+		return
+	_scan_t = maxf(0.0, _scan_t - dt)
+	var k := 1.0 - _scan_t / 2.0
+	var rad := k * 28.0
+	var fade_s := sin(clampf(k, 0.0, 1.0) * PI)
+	for m in world.materials():
+		m.set_shader_parameter("scan_origin", _scan_origin)
+		m.set_shader_parameter("scan_radius", rad)
+		m.set_shader_parameter("scan_fade", fade_s if _scan_t > 0.0 else 0.0)
+
+
+func open_map() -> void:
+	if pause_menu.visible or machine_panel.visible or inv_screen.visible:
+		return
+	touch.reset()
+	touch.enabled = false
+	_release_mouse()
+	map_screen.open(self)
+	player.set_process(false)
+	sfx.play("ui")
+
+
 func _update_waypoint() -> void:
+	if custom_waypoint != null:
+		hud.info.waypoint = custom_waypoint
+		hud.info.wp_label = "Custom Pin"
+		if player.global_position.distance_to(custom_waypoint) < 4.5:
+			custom_waypoint = null
+			hud.toast("Arrived at custom waypoint", TF.AMBER)
+		else:
+			return
 	var q := quests.current()
 	hud.info.waypoint = null
 	if q.is_empty():
@@ -566,25 +823,10 @@ func _lamp_on(exposed: bool) -> bool:
 	return sky.daylight < 0.45 or not exposed or player.head_in_fluid or events.intensity > 0.6
 
 
-func _update_lights(dt: float) -> void:
-	_lights_t -= dt
-	if _lights_t > 0.0 and not world.lights_dirty:
-		return
-	_lights_t = 0.4
-	world.lights_dirty = false
-	var ls := world.nearest_lights(player.global_position, 8)
-	var lp := PackedVector4Array()
-	var lc := PackedVector4Array()
-	for l in ls:
-		lp.append(l)
-		lc.append(Vector4(1.1, 0.95, 0.66, 1.0))
-	while lp.size() < 8:
-		lp.append(Vector4(0, -1000, 0, 1))
-		lc.append(Vector4(0, 0, 0, 0))
-	for m in world.materials():
-		m.set_shader_parameter("lights_pos", lp)
-		m.set_shader_parameter("lights_col", lc)
-		m.set_shader_parameter("light_count", ls.size())
+func _update_lights(_dt: float) -> void:
+	# Placed lamps and emissive blocks are flood-filled into the terrain mesh (mesher.gd);
+	# only the helmet lamp is a dynamic shader light.
+	pass
 
 
 func _update_death(dt: float) -> void:
@@ -629,6 +871,7 @@ func _update_travel(dt: float) -> void:
 	fade.color = Color(0.85, 0.95, 1.0, clampf(1.0 - _travel_t / 2.6, 0.0, 1.0))
 	if _travel_t <= 0.0:
 		_travel_t = -1.0
+		Game.unlock_achievement("first_jump")
 		Game.planet_id = _travel_to
 		save()
 		travel_to.emit(_travel_to)
@@ -666,6 +909,7 @@ func _on_mined(pos: Vector3i, id: int) -> void:
 	var d := Reg.block_def(id)
 	evolution.on_mined()
 	quests.event("mine", d.name)
+	Game.record_daily("mine", 1)
 	var center := Vector3(pos) + Vector3(0.5, 0.5, 0.5)
 	var table: String = d.get("loot", "")
 	if table != "":
@@ -688,13 +932,79 @@ func _on_mined(pos: Vector3i, id: int) -> void:
 
 
 func _on_placed(pos: Vector3i, id: int) -> void:
-	quests.event("place", Reg.block_def(id).name)
+	var bname: String = Reg.block_def(id).name
+	quests.event("place", bname)
+	Game.record_daily("place", 1)
+	if bname == "conveyor":
+		var dir_idx := posmod(int(round(-player.yaw / (PI * 0.5))), 4)
+		machines.set_conveyor_dir(pos, dir_idx)
+		hud.toast("Conveyor placed facing %s (tap USE on it to rotate)" % ["North", "East", "South", "West"][dir_idx], TF.CYAN)
+	elif bname == "turret":
+		hud.toast("Defense Turret online — targets hostiles within 18m when powered", TF.CYAN)
 
 
 func _on_crafted(item: String, n: int) -> void:
 	hud.toast("Fabricated %s ×%d" % [Reg.item_label(item), n], TF.GREEN)
 	sfx.play("craft", -4.0)
 	quests.event("craft", item, n)
+	Game.unlock_achievement("first_craft")
+	Game.record_daily("craft", 1)
+
+
+func _on_achievement(_id: String, title: String, shards: int) -> void:
+	hud.toast("★ ACHIEVEMENT · %s (+%d Stellar Shards)" % [title, shards], TF.AMBER)
+	sfx.play("quest", 0.0, 1.2)
+
+
+func _on_daily_done(title: String, shards: int) -> void:
+	hud.toast("◈ DAILY COMPLETE · %s (+%d Stellar Shards)" % [title, shards], TF.CYAN)
+	sfx.play("quest", -2.0, 1.3)
+
+
+func _open_dungeon_gate(pos: Vector3i) -> void:
+	var gate_id := Reg.block("dungeon_gate")
+	var opened := 0
+	for dy in range(-4, 5):
+		for dz in range(-4, 5):
+			for dx in range(-2, 3):
+				var q := pos + Vector3i(dx, dy, dz)
+				if world.get_block(q.x, q.y, q.z) == gate_id:
+					world.set_block(q.x, q.y, q.z, 0)
+					opened += 1
+	if opened == 0:
+		return
+	var center := Vector3(pos) + Vector3(3.0, 1.5, 0.5)
+	fx.explosion(Vector3(pos) + Vector3(0.5, 1.0, 0.5), Color(0.35, 0.95, 1.0))
+	sfx.play("growl", 3.0, 0.65)
+	player.shake(0.65)
+	Game.unlock_achievement("vault_raider")
+	hud.toast("⚠ SEALED VAULT UNLOCKED — The Vault Warden awakens!", TF.AMBER)
+	if creatures != null and Reg.creatures.has("cryo_titan"):
+		var warden := creatures.spawn("cryo_titan", center, false, false)
+		if warden != null:
+			warden.state = "chase"
+
+
+func _play_terraform_cutscene() -> void:
+	_cutscene_t = 3.5
+	Game.unlock_achievement("terraformer")
+	sfx.play("warp", -2.0, 1.35)
+	hud.celebrate("ATMOSPHERE 100% · BREATHABLE WORLD")
+	hud.story("ECHO", "Atmospheric pressure nominal. Oxygen levels at 21%. Skies are turning clear blue — helmets off, pioneer! This world is alive.")
+	var pp := player.global_position
+	for k in 4:
+		var a := k * PI * 0.5
+		fx.sparks(pp + Vector3(cos(a) * 5.0, 4.0, sin(a) * 5.0), Color(0.45, 0.95, 1.0), 26)
+
+
+func _update_cutscene(dt: float) -> void:
+	if _cutscene_t <= 0.0:
+		return
+	_cutscene_t = maxf(0.0, _cutscene_t - dt)
+	var k := clampf(1.0 - _cutscene_t / 3.5, 0.0, 1.0)
+	# Gentle skyward pan and sunlit atmospheric glow pulse
+	player.pitch = lerpf(player.pitch, 0.42, minf(dt * 1.8, 1.0))
+	fade.color = Color(0.75, 0.95, 1.0, sin(k * PI) * 0.25 if _cutscene_t > 0.0 else 0.0)
 
 
 func _on_quest_done(q: Dictionary) -> void:
@@ -742,6 +1052,14 @@ func _on_use() -> void:
 			return
 		elif ev == "starfall":
 			events.start_starfall(player.target.pos)
+			return
+		elif ev == "dungeon_gate":
+			_open_dungeon_gate(player.target.pos)
+			return
+		if Reg.block_def(id).name == "conveyor":
+			var facing := machines.rotate_conveyor(player.target.pos)
+			hud.toast("Conveyor rotated → " + facing, TF.CYAN)
+			sfx.play("ui", -6.0)
 			return
 		if machines.is_interactive(id):
 			_open_machine(player.target.pos, id)
@@ -869,6 +1187,10 @@ func _on_touch_button(n: String) -> void:
 			open_inventory()
 		"menu":
 			open_pause()
+		"scan":
+			trigger_scan()
+		"map":
+			open_map()
 
 
 func open_inventory() -> void:
@@ -913,6 +1235,15 @@ func _on_pause_action(a: String) -> void:
 			exit_to_title.emit()
 
 
+func _exit_tree() -> void:
+	if Game.crafted.is_connected(_on_crafted):
+		Game.crafted.disconnect(_on_crafted)
+	if Game.achievement_unlocked.is_connected(_on_achievement):
+		Game.achievement_unlocked.disconnect(_on_achievement)
+	if Game.daily_completed.is_connected(_on_daily_done):
+		Game.daily_completed.disconnect(_on_daily_done)
+
+
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_PAUSED or what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_APPLICATION_FOCUS_OUT:
 		if world != null and loading != null and not loading.visible:
@@ -930,6 +1261,10 @@ func save() -> void:
 	st["boss_done"] = creatures.boss_done
 	st["spawn"] = spawn_point
 	st["last_time"] = Time.get_unix_time_from_system()
+	st["explored"] = explored_chunks
+	st["pois"] = discovered_pois
+	if custom_waypoint != null:
+		st["custom_wp"] = custom_waypoint
 	if rover != null:
 		st["rover"] = {"pos": rover.global_position, "heading": rover.heading}
 	st.merge(npcs.save_data(), true)
@@ -973,10 +1308,12 @@ func _unhandled_input(event: InputEvent) -> void:
 			return
 		if mb.button_index == MOUSE_BUTTON_LEFT:
 			player.ctl.mine = mb.pressed
-		elif mb.button_index == MOUSE_BUTTON_RIGHT and mb.pressed:
-			player.ctl.place = true
-			if rover != null and rover.driving:
-				_exit_rover()
+		elif mb.button_index == MOUSE_BUTTON_RIGHT:
+			if mb.pressed:
+				player.ctl.place = true
+				if rover != null and rover.driving:
+					_exit_rover()
+			player.ctl.hold_place = mb.pressed
 		elif mb.button_index == MOUSE_BUTTON_WHEEL_UP and mb.pressed:
 			player.selected = posmod(player.selected - 1, 9)
 		elif mb.button_index == MOUSE_BUTTON_WHEEL_DOWN and mb.pressed:
@@ -994,11 +1331,26 @@ func _unhandled_input(event: InputEvent) -> void:
 				open_inventory()
 		elif k == KEY_F:
 			_on_use()
+		elif k == KEY_Q:
+			trigger_scan()
+		elif k == KEY_R:
+			hud.toast("Build rotation → " + player.rotate_build(), TF.CYAN)
+		elif k == KEY_B:
+			player.copy_blueprint()
+		elif k == KEY_V:
+			player.paste_blueprint()
+		elif k == KEY_M:
+			if map_screen.visible:
+				map_screen._close()
+			else:
+				open_map()
 		elif k == KEY_ESCAPE:
 			if inv_screen.visible:
 				inv_screen._on_close()
 			elif machine_panel.visible:
 				machine_panel._close()
+			elif map_screen.visible:
+				map_screen._close()
 			elif pause_menu.visible:
 				_on_pause_action("resume")
 			else:

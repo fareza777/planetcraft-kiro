@@ -10,20 +10,34 @@ const H := 128
 const HYDRO_TIME := 75.0
 const MINER_TIME := 14.0
 const SMELT_TIME := 5.0
+const CONVEYOR_TIME := 0.85
+const TURRET_TIME := 0.85
 const ORES := ["ferrite_ore", "cuprite_ore", "aurium_ore", "titan_ore", "uranite_ore", "cobalt_ore", "meteorite"]
+const CARDINALS := [Vector3i(0, 0, -1), Vector3i(1, 0, 0), Vector3i(0, 0, 1), Vector3i(-1, 0, 0)]
 
 var world: VoxelWorld
 var sky: SkyController
+var creatures: Creatures
+var fx: Fx
+var sfx: Sfx
 var by_type: Dictionary = {}     # machine/station type -> {Vector3i: true}
 var state: Dictionary = {}       # Vector3i -> {"inv": [...], "t": float}
+var conveyor_dirs: Dictionary = {} # Vector3i -> int (0=N, 1=E, 2=S, 3=W)
+var cable_networks: int = 0
+var powered_nodes: Dictionary = {} # Vector3i -> true (machines powered via cable or proximity)
 var battery := 0.0
 var capacity := 0.0
 var gen := 0.0
 var use := 0.0
 var powered := true
 var _drones: Array = []
+var _packets: Array = []          # visual items gliding on conveyors
+var _belt_t := 0.0
+var _turret_t := 0.0
 var _drone_mesh: Mesh
 var _drone_mat: StandardMaterial3D
+var _pkt_mesh: Mesh
+var _pkt_mat: StandardMaterial3D
 
 
 func _ready() -> void:
@@ -34,6 +48,12 @@ func _ready() -> void:
 	_drone_mat.albedo_color = Color(1.0, 0.8, 0.3)
 	_drone_mat.emission_enabled = true
 	_drone_mat.emission = Color(1.0, 0.7, 0.2)
+	var pb := BoxMesh.new()
+	pb.size = Vector3(0.28, 0.28, 0.28)
+	_pkt_mesh = pb
+	_pkt_mat = StandardMaterial3D.new()
+	_pkt_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	_pkt_mat.albedo_color = Color(0.4, 0.95, 1.0)
 
 
 func _types_of(id: int) -> Array:
@@ -43,6 +63,8 @@ func _types_of(id: int) -> Array:
 		t.append(d.machine)
 	if d.has("station") and not t.has(d.station):
 		t.append(d.station)
+	if d.get("conduit", false) and not t.has("cable"):
+		t.append("cable")
 	return t
 
 
@@ -65,6 +87,7 @@ func rebuild(mods: Dictionary, saved: Dictionary) -> void:
 				_add(t, p)
 	state = saved.get("machines", {})
 	battery = float(saved.get("battery", 0.0))
+	conveyor_dirs = saved.get("conveyor_dirs", {})
 	_recount()
 
 
@@ -93,6 +116,64 @@ func on_block_changed(p: Vector3i, old_id: int, new_id: int) -> Array:
 func _recount() -> void:
 	capacity = count("battery") * float(Reg.block_def(Reg.block("battery")).get("capacity", 400))
 	battery = minf(battery, capacity)
+	_rebuild_power_networks()
+
+
+## Flood-fill wired power networks across adjacent cables and machines. Also grants local
+## proximity power within 10 blocks of any generator/battery so early crash-pod layouts work.
+func _rebuild_power_networks() -> void:
+	powered_nodes.clear()
+	cable_networks = 0
+	var all_nodes: Dictionary = {}
+	for t in by_type:
+		for p in by_type[t]:
+			all_nodes[p] = true
+	var sources := []
+	for t in ["solar", "reactor", "battery"]:
+		for p in positions(t):
+			sources.append(p)
+	var visited: Dictionary = {}
+	var dirs := [Vector3i(1, 0, 0), Vector3i(-1, 0, 0), Vector3i(0, 1, 0), Vector3i(0, -1, 0), Vector3i(0, 0, 1), Vector3i(0, 0, -1)]
+	for src in sources:
+		if visited.has(src):
+			continue
+		cable_networks += 1
+		var q: Array = [src]
+		visited[src] = true
+		while not q.is_empty():
+			var cur: Vector3i = q.pop_front()
+			powered_nodes[cur] = true
+			for d in dirs:
+				var nb: Vector3i = cur + d
+				if all_nodes.has(nb) and not visited.has(nb):
+					visited[nb] = true
+					q.append(nb)
+	# Proximity fallback (10 blocks) for starter pod & compact bases without cables
+	for p in all_nodes:
+		if powered_nodes.has(p):
+			continue
+		for src in sources:
+			if Vector3(p).distance_to(Vector3(src)) <= 10.5:
+				powered_nodes[p] = true
+				break
+
+
+func is_machine_powered(p: Vector3i) -> bool:
+	if not powered:
+		return false
+	if count("cable") == 0:
+		return true
+	return powered_nodes.has(p)
+
+
+func set_conveyor_dir(p: Vector3i, dir_idx: int) -> void:
+	conveyor_dirs[p] = posmod(dir_idx, 4)
+
+
+func rotate_conveyor(p: Vector3i) -> String:
+	var nd := posmod(int(conveyor_dirs.get(p, 0)) + 1, 4)
+	conveyor_dirs[p] = nd
+	return ["North", "East", "South", "West"][nd]
 
 
 func count(t: String) -> int:
@@ -188,19 +269,22 @@ func tick(dt: float, player_pos: Vector3) -> void:
 	var day := sky.daylight if sky != null else 1.0
 	gen = count("solar") * float(Reg.block_def(Reg.block("solar_panel")).get("power", 6)) * day + count("reactor") * 40.0
 	use = 0.0
-	for t in ["o2", "heater", "smelter", "hydro", "miner", "refinery", "terraformer", "assembler", "medbay"]:
+	for t in ["o2", "heater", "smelter", "hydro", "miner", "refinery", "terraformer", "assembler", "medbay", "turret"]:
 		var bid := _block_for(t)
 		if bid > 0:
 			use += count(t) * absf(float(Reg.block_def(bid).get("power", 0)))
 	var net := gen - use
 	battery = clampf(battery + net * dt, 0.0, capacity)
 	powered = use <= 0.0 or net >= 0.0 or battery > 0.0
+	_tick_drones(dt)
+	_tick_packets(dt)
 	if not powered:
 		return
 	_tick_hydro(dt)
 	_tick_smelt(dt)
 	_tick_miners(dt, player_pos)
-	_tick_drones(dt)
+	_tick_conveyors(dt)
+	_tick_turrets(dt)
 
 
 func _block_for(t: String) -> int:
@@ -214,6 +298,7 @@ func _block_for(t: String) -> int:
 		"terraformer": return Reg.block("terraformer")
 		"assembler": return Reg.block("assembler")
 		"medbay": return Reg.block("medbay")
+		"turret": return Reg.block("turret")
 	return 0
 
 
@@ -363,5 +448,117 @@ func simulate_offline(seconds: float) -> Dictionary:
 	return report
 
 
+func _take_one(p: Vector3i, smeltable_only := false) -> String:
+	if not state.has(p):
+		return ""
+	var inv: Array = state[p].get("inv", [])
+	for i in inv.size():
+		var s = inv[i]
+		if s == null:
+			continue
+		if smeltable_only and _smelt_out(s.id) == "":
+			continue
+		var id: String = s.id
+		s.n -= 1
+		if s.n <= 0:
+			inv[i] = null
+		return id
+	return ""
+
+
+func _is_storage_machine(p: Vector3i) -> bool:
+	for t in ["crate", "smelter", "hydro", "miner", "conveyor"]:
+		if by_type.get(t, {}).has(p):
+			return true
+	return false
+
+
+func _tick_conveyors(dt: float) -> void:
+	var belts := positions("conveyor")
+	if belts.is_empty():
+		return
+	_belt_t += dt
+	if _belt_t < CONVEYOR_TIME:
+		return
+	_belt_t = 0.0
+	for p in belts:
+		if not is_machine_powered(p):
+			continue
+		var d_idx: int = int(conveyor_dirs.get(p, 0))
+		var fwd: Vector3i = CARDINALS[posmod(d_idx, 4)]
+		var src: Vector3i = p - fwd
+		var dst: Vector3i = p + fwd
+		# If belt holds an item, push it forward
+		var carried := _take_one(p)
+		if carried != "":
+			if _is_storage_machine(dst):
+				if store(dst, carried, 1) == 0:
+					_spawn_packet(Vector3(p) + Vector3(0.5, 1.05, 0.5), Vector3(dst) + Vector3(0.5, 1.05, 0.5))
+					continue
+			# couldn't push, keep on belt
+			store(p, carried, 1)
+		else:
+			# Pull from behind (miner, hydro, smelter, crate, or prior belt)
+			if _is_storage_machine(src):
+				var want_smelt: bool = by_type.get("smelter", {}).has(dst)
+				var item := _take_one(src, want_smelt)
+				if item != "":
+					store(p, item, 1)
+					_spawn_packet(Vector3(src) + Vector3(0.5, 1.05, 0.5), Vector3(p) + Vector3(0.5, 1.05, 0.5))
+
+
+func _spawn_packet(from: Vector3, to: Vector3) -> void:
+	if _packets.size() > 24:
+		return
+	var mi := MeshInstance3D.new()
+	mi.mesh = _pkt_mesh
+	mi.material_override = _pkt_mat
+	add_child(mi)
+	mi.global_position = from
+	_packets.append({"mi": mi, "from": from, "to": to, "t": 0.0})
+
+
+func _tick_packets(dt: float) -> void:
+	var keep := []
+	for pk in _packets:
+		pk.t += dt / CONVEYOR_TIME
+		var mi: MeshInstance3D = pk.mi
+		mi.global_position = pk.from.lerp(pk.to, clampf(pk.t, 0.0, 1.0))
+		mi.rotation.y += dt * 4.0
+		if pk.t >= 1.0:
+			mi.queue_free()
+		else:
+			keep.append(pk)
+	_packets = keep
+
+
+## Powered Defense Turrets (and Colony Beacons at shorter range) shoot hostile creatures.
+func _tick_turrets(dt: float) -> void:
+	if creatures == null:
+		return
+	_turret_t += dt
+	if _turret_t < TURRET_TIME:
+		return
+	_turret_t = 0.0
+	var shooters := []
+	for p in positions("turret"):
+		shooters.append([p, 18.0, 14.0])
+	for p in positions("beacon"):
+		shooters.append([p, 12.0, 8.0])
+	for sh in shooters:
+		var p: Vector3i = sh[0]
+		if not is_machine_powered(p):
+			continue
+		var origin := Vector3(p) + Vector3(0.5, 1.35, 0.5)
+		var tgt := creatures.nearest_hostile(origin, float(sh[1]), null)
+		if tgt != null:
+			var dir := (tgt.center() - origin).normalized()
+			creatures._spawn_proj(origin, dir * 32.0, float(sh[2]), "player", Color(0.35, 0.95, 1.0))
+			if fx != null:
+				fx.sparks(origin, Color(0.35, 0.95, 1.0), 4)
+			if sfx != null and creatures.player != null:
+				sfx.play_at("shoot", origin, creatures.player.global_position, -8.0, 1.35)
+
+
 func save_data() -> Dictionary:
-	return {"machines": state, "battery": battery}
+	return {"machines": state, "battery": battery, "conveyor_dirs": conveyor_dirs}

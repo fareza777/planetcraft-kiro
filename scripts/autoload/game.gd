@@ -7,15 +7,17 @@ const SAVE_DIR := "user://saves/slot0/"
 const SETTINGS_PATH := "user://settings.cfg"
 const SAVE_VERSION := 1
 
-var settings := {"render_distance": 6, "sensitivity": 1.0, "show_fps": true, "glow": true, "touch": true, "render_scale": 1.0, "clouds": true, "button_scale": 1.0, "invert_y": false, "master_volume": 0.85, "ambience": 0.7, "fov": 72, "auto_jump": true, "camera_shake": true, "damage_numbers": true, "haptics": true}
+var settings := {"render_distance": 6, "sensitivity": 1.0, "show_fps": false, "glow": true, "touch": true, "render_scale": 1.0, "clouds": true, "color_grading": true, "far_lod": true, "aim_assist": true, "button_scale": 1.0, "invert_y": false, "master_volume": 0.85, "ambience": 0.7, "fov": 72, "auto_jump": true, "camera_shake": true, "damage_numbers": true, "haptics": true}
 var _defaults := {}
 var world_seed := 0
 var planet_id := "verdania"
 var continue_requested := false
 var meta: Dictionary = {}
+var pinned_recipe := ""
 
 
 func _ready() -> void:
+	settings.show_fps = OS.is_debug_build()
 	_defaults = settings.duplicate()
 	load_settings()
 	load_profile()
@@ -85,7 +87,83 @@ func has_save() -> bool:
 
 const PROFILE_PATH := "user://profile.dat"
 signal shards_changed(total: int)
-var profile := {"shards": 0, "lifetime": 0, "owned": {}, "equipped": {}, "onboarded": false, "remove_ads": false}
+signal achievement_unlocked(id: String, title: String, shards: int)
+signal daily_completed(title: String, shards: int)
+var profile := {"shards": 0, "lifetime": 0, "owned": {}, "equipped": {}, "onboarded": false, "remove_ads": false, "achievements": {}, "daily": {}}
+
+const ACHIEVEMENTS := {
+	"first_craft": {"title": "Field Engineer", "desc": "Fabricate your first item", "shards": 2},
+	"first_kill": {"title": "First Contact", "desc": "Defeat a hostile alien creature", "shards": 2},
+	"elite_hunter": {"title": "Apex Hunter", "desc": "Defeat an Elite ★ creature", "shards": 4},
+	"tamer": {"title": "Xenobiologist", "desc": "Tame a wild alien companion", "shards": 3},
+	"first_jump": {"title": "Starfarer", "desc": "Jump to another planet", "shards": 4},
+	"vault_raider": {"title": "Vault Breaker", "desc": "Unseal an underground Precursor Vault", "shards": 4},
+	"boss_slayer": {"title": "Titan Slayer", "desc": "Defeat a planetary or vault boss", "shards": 6},
+	"raid_defender": {"title": "Colony Defender", "desc": "Repel a pollution-triggered Night Raid", "shards": 3},
+	"terraformer": {"title": "World Shaper", "desc": "Reach 100% breathable atmosphere", "shards": 8},
+	"scanner_pro": {"title": "Deep Surveyor", "desc": "Use the Scanner Pulse to survey terrain", "shards": 2},
+}
+
+const DAILY_POOL := [
+	{"id": "mine", "title": "Excavator", "desc": "Mine 25 blocks", "goal": 25, "shards": 3},
+	{"id": "place", "title": "Architect", "desc": "Place 20 blocks", "goal": 20, "shards": 2},
+	{"id": "craft", "title": "Fabricator", "desc": "Craft 4 items", "goal": 4, "shards": 3},
+	{"id": "kill", "title": "Frontier Guard", "desc": "Defeat 4 creatures", "goal": 4, "shards": 4},
+	{"id": "scan", "title": "Surveyor", "desc": "Run 3 Scanner Pulses", "goal": 3, "shards": 2},
+]
+
+
+func unlock_achievement(id: String) -> bool:
+	if not ACHIEVEMENTS.has(id):
+		return false
+	if not profile.has("achievements") or not (profile.achievements is Dictionary):
+		profile["achievements"] = {}
+	if profile.achievements.has(id):
+		return false
+	profile.achievements[id] = true
+	var a: Dictionary = ACHIEVEMENTS[id]
+	add_shards(int(a.shards))
+	achievement_unlocked.emit(id, String(a.title), int(a.shards))
+	return true
+
+
+func _today_key() -> String:
+	var d := Time.get_date_dict_from_system()
+	return "%04d-%02d-%02d" % [int(d.year), int(d.month), int(d.day)]
+
+
+func daily_challenges() -> Array:
+	var key := _today_key()
+	if not profile.has("daily") or not (profile.daily is Dictionary) or String(profile.daily.get("day", "")) != key:
+		var rng := RandomNumberGenerator.new()
+		rng.seed = hash(key)
+		var idxs := [0, 1, 2, 3, 4]
+		var chosen := []
+		for _k in 3:
+			var pick := rng.randi() % idxs.size()
+			var tpl: Dictionary = DAILY_POOL[idxs[pick]].duplicate(true)
+			tpl["prog"] = 0
+			tpl["done"] = false
+			chosen.append(tpl)
+			idxs.remove_at(pick)
+		profile["daily"] = {"day": key, "list": chosen}
+		save_profile()
+	return profile.daily.get("list", [])
+
+
+func record_daily(kind: String, amount := 1) -> void:
+	var list := daily_challenges()
+	var dirty := false
+	for ch in list:
+		if ch.id == kind and not bool(ch.done):
+			ch.prog = mini(int(ch.goal), int(ch.prog) + amount)
+			dirty = true
+			if int(ch.prog) >= int(ch.goal):
+				ch.done = true
+				add_shards(int(ch.shards))
+				daily_completed.emit(String(ch.title), int(ch.shards))
+	if dirty:
+		save_profile()
 
 
 func load_profile() -> void:
@@ -323,4 +401,29 @@ func run_self_tests() -> Array:
 		"title and brand splash videos present",
 	])
 	out.append([Iap.PRODUCT == "remove_ads" and Iap.price == "$4.99", "remove-ads product and list price"])
+	# New gameplay & visual upgrade checks
+	var sv2 := Survival.new()
+	sv2.modules = ["skitter_carapace", "moss_pearl", "prism_heart"]
+	var mods_out := sv2.recalc_caps()
+	out.append([sv2.max_hp == 125.0 and sv2.max_o2 == 125.0 and is_equal_approx(float(mods_out.mine), 1.25), "suit modules boost max stats and mining speed"])
+	var sp_save: Dictionary = profile.duplicate(true)
+	profile.achievements = {}
+	profile.daily = {}
+	var sh0 := int(profile.shards)
+	var unlocked := unlock_achievement("first_craft")
+	var dc := daily_challenges()
+	out.append([unlocked and int(profile.shards) > sh0 and not unlock_achievement("first_craft"), "achievements unlock once and grant shards"])
+	out.append([dc.size() == 3, "daily challenges generate 3 offline tasks"])
+	profile = sp_save
+	save_profile()
+	out.append([Reg.block("turret") > 0 and Reg.block("hull_slab") > 0 and Reg.block("hull_stairs") > 0 and Reg.block("dungeon_gate") > 0, "new blocks (turret, slab, stairs, dungeon_gate) loaded"])
+	out.append([Reg.creatures.has("cryo_titan"), "second boss (cryo_titan) loaded"])
+	var mach := Machines.new()
+	mach.on_block_changed(Vector3i(0, 10, 0), 0, Reg.block("solar_panel"))
+	mach.on_block_changed(Vector3i(1, 10, 0), 0, Reg.block("cable"))
+	mach.on_block_changed(Vector3i(2, 10, 0), 0, Reg.block("turret"))
+	out.append([mach.is_machine_powered(Vector3i(2, 10, 0)) and mach.cable_networks >= 1, "wired cable network powers connected machines"])
+	var dir_lbl := mach.rotate_conveyor(Vector3i(3, 10, 0))
+	out.append([dir_lbl == "East", "conveyor rotation updates facing direction"])
+	mach.free()
 	return out

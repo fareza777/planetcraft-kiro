@@ -31,14 +31,18 @@ systems (terraforming, colony automation, events, store). Tested as described in
 - Tested on one physical device (Redmi Note 11 / Snapdragon 680). Performance on other GPUs is unknown.
 
 ## Next steps (planned, not implemented)
-1. Wired power networks and real conveyor item transport.
-2. Modular space-station building in the Kessler Belt with zero-g movement.
-3. Underground multi-room dungeons with locked doors and a second boss.
-4. Colonist AI that builds from blueprints.
-5. Far-terrain LOD meshes for larger view distances on high-end phones.
-6. Flowing water and lava.
-7. Balancing pass from playtest telemetry collected locally (opt-in, offline).
-8. Release-signed builds and a Play Store listing.
+1. Modular space-station building in the Kessler Belt with zero-g movement.
+2. Colonist AI that builds from blueprints.
+3. Flowing water and lava physics.
+4. Balancing pass from playtest telemetry collected locally (opt-in, offline).
+5. Release-signed builds and a Play Store listing.
+
+## Gameplay & visual upgrade (implemented on `feature/gameplay-visual-upgrade`)
+- **BFS flood-fill lighting:** smooth per-corner sky light and block light baked in the mesher, removing the 8-lamp per-fragment shader loop.
+- **Visual polish:** reduced grass/terrain noise shimmer, per-block + macro shader variation, sunlit foliage canopy shading, per-planet colour grading, horizon-matched fog, water depth tint & shoreline foam, aurora & shooting stars & planet cloud styles, far-terrain 4×4 LOD skirt, detailed mining tool viewmodel with sway & heat-glow fins, multi-tone block debris and footstep/landing dust, survival status screen vignettes (O₂, frost, heat, radiation), FPS counter hidden by default in release builds.
+- **Combat & game feel:** 40–55 ms hitstop on kills/hard blocks/weakpoint crits, 0.4 s enemy attack telegraph wind-up, double-tap JUMP jetpack dash with dodge i-frames, subtle touch ranged aim assist, weakpoint critical hits.
+- **Progression & exploration:** HUD recipe pinning, visual Tech Tree tab, station/recipe unlock toasts, 2-minute idle ECHO next-step hints, 3 Suit Module slots socketing rare drops, Scanner Pulse wave highlighting ores/POIs/creatures, circular HUD minimap & full-screen revealed Planetary Map with POIs and custom waypoints.
+- **Colony, dungeons & retention:** working Conveyor item transport with gliding packets & rotation, wired Power Conduit networks, powered Defense Turrets, pollution-triggered Night Hive Raids, building QoL (continuous hold-to-place, slabs & stairs, rotation, 3×3×3 blueprint copy-paste), terraforming 100% cutscene + water pools + living music shift + spawned wildlife, underground multi-room Precursor Vault dungeons with Sealed Vault Doors and a second boss (The Vault Warden), 10 persistent Achievements and 3 rotating offline Daily Challenges granting Stellar Shards.
 
 ## Store build: implemented in v0.2.0
 The main branch now carries the Play Store shell requested after the hackathon. The Kiroween v0.1.2

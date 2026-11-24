@@ -43,6 +43,7 @@ var _tiles: PackedInt32Array
 var _emis: PackedByteArray
 var _lightr: PackedFloat32Array
 var _solid: PackedByteArray
+var _shapes: PackedByteArray
 
 var _gen_pending: Dictionary = {}
 var _res_gen: Array = []
@@ -65,6 +66,7 @@ func setup(p: Dictionary, world_seed: int, saved_mods: Dictionary) -> void:
 	_emis = Reg.emissive
 	_lightr = Reg.light_radius
 	_solid = Reg.solid
+	_shapes = Reg.shape
 	var cores := OS.get_processor_count()
 	max_tasks = clampi(cores - 2, 2, 6)
 	mat_opaque = _mat("res://shaders/voxel_opaque.gdshader")
@@ -183,12 +185,20 @@ func _start_mesh(col: Column, sections: PackedInt32Array) -> void:
 	col.dirty.clear()
 	col.meshing = true
 	var cols := []
+	var ext := []
 	for dz in range(-1, 2):
 		for dx in range(-1, 2):
 			var n: Column = chunks[col.key + Vector2i(dx, dz)]
 			cols.append(n.blocks)
+			if dx == 0 and dz == 0:
+				continue
+			for s in SECT:
+				for l in n.lights[s]:
+					var lp := Vector4(l.x + dx * CS + 1, l.y, l.z + dz * CS + 1, minf(15.0, floorf(l.w) + 3.0))
+					if lp.x > -15 and lp.x < 33 and lp.z > -15 and lp.z < 33:
+						ext.append(lp)
 	_active += 1
-	_task_ids.append(WorkerThreadPool.add_task(_task_mesh.bind(col.key, col.version, cols, sections), sections.size() < 8, "mesh"))
+	_task_ids.append(WorkerThreadPool.add_task(_task_mesh.bind(col.key, col.version, cols, sections, ext), sections.size() < 8, "mesh"))
 
 
 func _task_gen(key: Vector2i, m: Dictionary) -> void:
@@ -200,10 +210,10 @@ func _task_gen(key: Vector2i, m: Dictionary) -> void:
 	_mutex.unlock()
 
 
-func _task_mesh(key: Vector2i, version: int, cols: Array, sections: PackedInt32Array) -> void:
+func _task_mesh(key: Vector2i, version: int, cols: Array, sections: PackedInt32Array, ext: Array) -> void:
 	var t0 := Time.get_ticks_usec()
 	var pd := Mesher.pad(cols)
-	var res := Mesher.mesh_sections(pd, sections, _kinds, _tiles, _emis, _lightr)
+	var res := Mesher.mesh_sections(pd, sections, _kinds, _tiles, _emis, _lightr, ext, _shapes)
 	var dt := (Time.get_ticks_usec() - t0) / 1000.0
 	_mutex.lock()
 	_res_mesh.append([key, version, res, dt])
@@ -247,6 +257,14 @@ func _collect() -> void:
 
 func _apply_section(col: Column, sec: Dictionary) -> void:
 	var s: int = sec.s
+	if col.meshed and col.lights[s] != sec.lights:
+		# lamps in this section changed: neighbours sample them for block light
+		for dz in range(-1, 2):
+			for dx in range(-1, 2):
+				var n: Column = chunks.get(col.key + Vector2i(dx, dz))
+				if n != null and n != col and n.meshed:
+					for k in range(maxi(0, s - 1), mini(SECT, s + 2)):
+						n.dirty[k] = true
 	col.lights[s] = sec.lights
 	lights_dirty = true
 	var layers: Array = sec.layers
@@ -345,9 +363,10 @@ func set_block(x: int, y: int, z: int, id: int) -> bool:
 	mods[key][i] = id
 	var s := y >> 4
 	var secs := [s]
-	if y % CS == 0 and s > 0:
+	# light flood-fill reaches up to 15 blocks: refresh the sections above and below too
+	if s > 0:
 		secs.append(s - 1)
-	if y % CS == CS - 1 and s < SECT - 1:
+	if s < SECT - 1:
 		secs.append(s + 1)
 	if y >= old_top:
 		# column top changed: sky light below may change
@@ -356,13 +375,16 @@ func set_block(x: int, y: int, z: int, id: int) -> bool:
 				secs.append(k)
 	var dxs := [0]
 	var dzs := [0]
-	if lx == 0:
+	var reach := 1
+	if Reg.light_radius[id] > 0.0 or Reg.light_radius[old] > 0.0 or Reg.emissive[id] == 1 or Reg.emissive[old] == 1:
+		reach = 13
+	if lx < reach:
 		dxs.append(-1)
-	elif lx == 15:
+	if lx > 15 - reach:
 		dxs.append(1)
-	if lz == 0:
+	if lz < reach:
 		dzs.append(-1)
-	elif lz == 15:
+	if lz > 15 - reach:
 		dzs.append(1)
 	for dx in dxs:
 		for dz in dzs:

@@ -35,6 +35,13 @@ func setup(p: Dictionary, mats: Array, glow: bool) -> void:
 	sky_mat.set_shader_parameter("ring", 1.0 if s.get("ring", false) else 0.0)
 	sky_mat.set_shader_parameter("space", 1.0 if s.get("space", false) else 0.0)
 	sky_mat.set_shader_parameter("moon_dir", Vector3(-0.55, 0.32, -0.62).normalized())
+	sky_mat.set_shader_parameter("aurora", float(s.get("aurora", 0.0)))
+	sky_mat.set_shader_parameter("aurora_color", Color.html(s.get("aurora_color", "#4dffb0")))
+	sky_mat.set_shader_parameter("cloud_style", float(s.get("cloud_style", 0)))
+	_apply_grade(p.get("grade", {}))
+	var blc := Color.html(s.get("block_light", "#ffc780"))
+	for m in materials:
+		m.set_shader_parameter("block_light_color", blc)
 	var sky := Sky.new()
 	sky.sky_material = sky_mat
 	sky.process_mode = Sky.PROCESS_MODE_REALTIME
@@ -61,10 +68,30 @@ func setup(p: Dictionary, mats: Array, glow: bool) -> void:
 	add_child(sun)
 
 
+## Per-planet colour grading, done inside the terrain/sky shaders instead of a full-screen
+## adjustment pass (which would cost an extra render target on GL Compatibility phones).
+func _apply_grade(g: Dictionary) -> void:
+	var on: bool = Game.settings.get("color_grading", true)
+	var tint := Color.html(g.get("tint", "#ffffff")) if on else Color.WHITE
+	var sat := float(g.get("sat", 1.0)) if on else 1.0
+	var con := float(g.get("contrast", 1.0)) if on else 1.0
+	for m in materials + [sky_mat]:
+		m.set_shader_parameter("grade_tint", tint)
+		m.set_shader_parameter("grade_sat", sat)
+		m.set_shader_parameter("grade_contrast", con)
+
+
+func refresh_grade() -> void:
+	_apply_grade(planet.get("grade", {}))
+
+
 func set_view_distance(d: float) -> void:
 	view_dist = d
-	env.fog_depth_begin = d * 0.45
-	env.fog_depth_end = d * 0.95
+	# terrain is fully fogged a little before the last streamed chunk ring, so the world
+	# edge dissolves into the horizon band of the sky shader
+	env.fog_depth_begin = d * 0.35
+	env.fog_depth_end = d * 0.86
+	env.fog_depth_curve = 1.4
 
 
 func _process(dt: float) -> void:
@@ -88,8 +115,8 @@ func _process(dt: float) -> void:
 		fogc = fogc.lerp(storm_color * (0.25 + daylight * 0.75), storm)
 		amb = amb.lerp(storm_color * 0.6 * (0.3 + daylight * 0.7), storm * 0.5)
 		light_c = light_c * (1.0 - storm * 0.6)
-		env.fog_depth_end = lerpf(view_dist * 0.95, 30.0, storm)
-		env.fog_depth_begin = lerpf(view_dist * 0.45, 4.0, storm)
+		env.fog_depth_end = lerpf(view_dist * 0.86, 30.0, storm)
+		env.fog_depth_begin = lerpf(view_dist * 0.35, 4.0, storm)
 	env.fog_light_color = fogc
 	env.ambient_light_color = amb
 	env.ambient_light_energy = 1.0
@@ -103,6 +130,7 @@ func _process(dt: float) -> void:
 	sky_mat.set_shader_parameter("storm", storm)
 	sky_mat.set_shader_parameter("storm_color", storm_color)
 	sky_mat.set_shader_parameter("horizon_color", _c.horizon.lerp(fogc, storm))
+	sky_mat.set_shader_parameter("fog_color", fogc)
 	for m in materials:
 		m.set_shader_parameter("sun_dir", light_dir)
 		m.set_shader_parameter("sun_color", light_c)

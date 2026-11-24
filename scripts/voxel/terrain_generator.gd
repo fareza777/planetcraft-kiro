@@ -84,10 +84,10 @@ func _init(p: Dictionary, world_seed: int) -> void:
 	ruins_chance = float(p.get("ruins", 0.0))
 	structure_chance = float(p.get("structures", 0.028))
 	match p.id:
-		"verdania": structure_types = ["obelisk", "wreck", "hive", "shrine", "hive"]
-		"kryos": structure_types = ["obelisk", "wreck", "wreck"]
-		"pyrrhos": structure_types = ["obelisk", "hive", "wreck"]
-		"aridus": structure_types = ["obelisk", "wreck", "hive", "obelisk"]
+		"verdania": structure_types = ["obelisk", "wreck", "hive", "shrine", "vault"]
+		"kryos": structure_types = ["obelisk", "wreck", "vault"]
+		"pyrrhos": structure_types = ["obelisk", "hive", "wreck", "vault"]
+		"aridus": structure_types = ["obelisk", "wreck", "hive", "vault"]
 		"nullara": structure_types = ["shrine", "obelisk", "shrine"]
 		"kessler": structure_types = ["wreck"]
 		_: structure_types = ["wreck"]
@@ -529,6 +529,55 @@ func _gen_structure(b: PackedByteArray, rng: RandomNumberGenerator, heights: Pac
 				var h := rng.randi_range(3, 6)
 				for y in range(gy, gy + h):
 					_put(b, px, y, pz, brick if y == gy else cr, false)
+		"vault":
+			# Multi-room underground Precursor Vault: surface archway, lit descending shaft,
+			# antechamber, locked dungeon_gate doorway, and inner boss sanctum with reliquaries.
+			if gy < 20:
+				return
+			var brick: int = B.ruin_brick
+			var glyph: int = B.ruin_glyph
+			var lamp_id: int = B.lamp
+			var gate_id: int = B.get("dungeon_gate", glyph)
+			var chest_id: int = B.get("dungeon_chest", B.ruin_cache)
+			var floor_y := gy - 12
+			# Surface marker arch & shaft down to antechamber
+			for dx in range(-2, 3):
+				for dz in range(-2, 3):
+					if absi(dx) == 2 or absi(dz) == 2:
+						_put(b, 4 + dx, gy + 1, 4 + dz, brick, false)
+						if absi(dx) == 2 and absi(dz) == 2:
+							_put(b, 4 + dx, gy + 2, 4 + dz, brick, false)
+							_put(b, 4 + dx, gy + 3, 4 + dz, glyph, false)
+			for y in range(floor_y, gy + 2):
+				for dz in range(-1, 2):
+					for dx in range(-1, 2):
+						_put(b, 4 + dx, y, 4 + dz, 0, false)
+				# stepped descent ledges along shaft wall
+				var sx := 3 + ((y - floor_y) % 3)
+				_put(b, sx, y, 3, brick, false)
+				if (y - floor_y) % 4 == 2:
+					_put(b, 5, y, 5, lamp_id, false)
+			# Room 1 (Antechamber: x 2..7, z 2..13) + Room 2 (Boss Sanctum: x 8..14, z 2..13)
+			for y in range(floor_y - 1, floor_y + 6):
+				for z in range(2, 14):
+					for x in range(2, 15):
+						var wall: bool = x == 2 or x == 14 or z == 2 or z == 13 or y == floor_y - 1 or y == floor_y + 5
+						var divider: bool = x == 8
+						if wall:
+							_put(b, x, y, z, glyph if ((x + z + y) % 5 == 0) else brick, false)
+						elif divider:
+							var doorway: bool = z >= 6 and z <= 9 and y >= floor_y and y <= floor_y + 3
+							_put(b, x, y, z, gate_id if doorway else brick, false)
+						else:
+							_put(b, x, y, z, 0, false)
+			# Lighting, antechamber cache, and sanctum reliquaries
+			_put(b, 4, floor_y + 4, 8, lamp_id, false)
+			_put(b, 11, floor_y + 4, 5, lamp_id, false)
+			_put(b, 11, floor_y + 4, 10, lamp_id, false)
+			_put(b, 4, floor_y, 11, B.ruin_cache, false)
+			_put(b, 13, floor_y, 6, chest_id, false)
+			_put(b, 13, floor_y, 9, chest_id, false)
+			_put(b, 11, floor_y, 8, glyph, false)
 
 
 func _gen_ruin(b: PackedByteArray, rng: RandomNumberGenerator, heights: PackedInt32Array) -> void:

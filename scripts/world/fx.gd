@@ -82,8 +82,33 @@ func debris(block_pos: Vector3i, color: Color) -> void:
 	_burst(Vector3(block_pos) + Vector3(0.5, 0.5, 0.5), color, 18, 4.5, 14.0, 0.9, 1.0)
 
 
+## Multi-tone voxel debris sampled from the broken block's own texture.
+func block_debris(block_pos: Vector3i, block_id: int) -> void:
+	var c := Vector3(block_pos) + Vector3(0.5, 0.5, 0.5)
+	var base := Reg.block_color(block_id)
+	var side_tile := Reg.face_tiles[block_id * 6]
+	var side := Reg.tile_avg[side_tile] if side_tile < Reg.tile_avg.size() else base
+	_burst(c, base, 14, 4.6, 15.0, 0.85, 1.0)
+	_burst(c, side.darkened(0.15), 8, 3.6, 13.0, 0.7, 0.75)
+	if Reg.emissive[block_id] == 1:
+		_burst(c, base.lightened(0.35), 10, 5.2, 5.0, 0.55, 0.85, true)
+
+
+func dust_step(pos: Vector3, color: Color) -> void:
+	_burst(pos + Vector3(0, 0.08, 0), color.lightened(0.15), 4, 1.4, 3.5, 0.35, 0.55)
+
+
+func land_puff(pos: Vector3, color: Color, strength := 1.0) -> void:
+	var n := clampi(int(8 + strength * 10), 8, 22)
+	_burst(pos + Vector3(0, 0.12, 0), color.lightened(0.2), n, 2.5 + strength * 2.2, 6.0, 0.5, 0.75 + strength * 0.35)
+
+
+func dash_burst(pos: Vector3, color: Color) -> void:
+	_burst(pos, color, 18, 7.5, 1.5, 0.4, 0.9, true)
+
+
 func chips(pos: Vector3, color: Color) -> void:
-	_burst(pos, color, 4, 2.5, 12.0, 0.35, 0.6)
+	_burst(pos, color, 5, 2.8, 12.0, 0.35, 0.65)
 
 
 func sparks(pos: Vector3, color: Color, n := 14) -> void:

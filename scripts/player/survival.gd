@@ -3,6 +3,21 @@ extends RefCounted
 ## Player survival stats. update() is called every frame with an environment snapshot built
 ## by the world root (atmosphere, nearby machines, temperature, radiation, sunlight).
 
+const MODULE_SLOTS := 3
+const MODULE_DEFS := {
+	"moss_pearl": {"desc": "+25 Max O₂", "o2": 25.0},
+	"skitter_carapace": {"desc": "+25 Max HP", "hp": 25.0},
+	"prism_heart": {"desc": "+25% Mining Speed", "mine": 0.25},
+	"magma_pearl": {"desc": "+20% Weapon Damage", "dmg": 0.20},
+	"sentinel_eye": {"desc": "+35 Max Energy", "en": 35.0},
+	"stalker_fang": {"desc": "+30% Damage, +10% Speed", "dmg": 0.30, "speed": 0.10},
+	"frost_core": {"desc": "+45 Max HP, Thermal Buffer", "hp": 45.0, "thermal_buf": 15.0},
+	"wyrm_scale": {"desc": "+22% Speed, -35% Dash Cost", "speed": 0.22, "dash": -0.35},
+	"void_lens": {"desc": "+35% Mining, +30 Max Energy", "mine": 0.35, "en": 30.0},
+	"void_crown": {"desc": "+40 HP, +25% Dmg, +15% Speed", "hp": 40.0, "dmg": 0.25, "speed": 0.15},
+	"precursor_relic": {"desc": "+40 O₂, +40 Energy, +25% Mining", "o2": 40.0, "en": 40.0, "mine": 0.25},
+}
+
 var hp := 100.0
 var max_hp := 100.0
 var o2 := 100.0
@@ -13,6 +28,8 @@ var food := 100.0
 var rad := 0.0
 var body_temp := 20.0
 var upgrades := {}
+var modules: Array = ["", "", ""]
+var _thermal_buf := 0.0
 var warning := ""
 var last_damage := ""
 
@@ -32,8 +49,35 @@ func apply_upgrades(u: Dictionary) -> void:
 	if u.has("wyrmjet"):
 		u["jet"] = true
 	upgrades = u
-	max_o2 = 200.0 if u.has("o2") else 100.0
-	max_hp = 150.0 if u.has("armor") else 100.0
+	recalc_caps()
+
+
+func recalc_caps() -> Dictionary:
+	var hp_add := 0.0
+	var o2_add := 0.0
+	var en_add := 0.0
+	var spd := 1.0
+	var dmg := 1.0
+	var mine := 1.0
+	var dash := 1.0
+	_thermal_buf = 0.0
+	for m in modules:
+		var md: Dictionary = MODULE_DEFS.get(String(m), {})
+		hp_add += float(md.get("hp", 0.0))
+		o2_add += float(md.get("o2", 0.0))
+		en_add += float(md.get("en", 0.0))
+		spd += float(md.get("speed", 0.0))
+		dmg += float(md.get("dmg", 0.0))
+		mine += float(md.get("mine", 0.0))
+		dash += float(md.get("dash", 0.0))
+		_thermal_buf += float(md.get("thermal_buf", 0.0))
+	max_o2 = (200.0 if upgrades.has("o2") else 100.0) + o2_add
+	max_hp = (150.0 if upgrades.has("armor") else 100.0) + hp_add
+	max_energy = 100.0 + en_add
+	hp = minf(hp, max_hp)
+	o2 = minf(o2, max_o2)
+	energy = minf(energy, max_energy)
+	return {"speed": spd, "dmg": dmg, "mine": mine, "dash": maxf(0.35, dash)}
 
 
 func update(dt: float, env: Dictionary) -> void:
@@ -65,8 +109,8 @@ func update(dt: float, env: Dictionary) -> void:
 	var ext: float = env.get("temp", 20.0)
 	if env.get("heated", false):
 		ext = lerpf(ext, 21.0, 0.85)
-	var lo := -80.0 if upgrades.has("thermal") else -15.0
-	var hi := 110.0 if upgrades.has("thermal") else 45.0
+	var lo := (-80.0 if upgrades.has("thermal") else -15.0) - _thermal_buf
+	var hi := (110.0 if upgrades.has("thermal") else 45.0) + _thermal_buf
 	body_temp = lerpf(body_temp, ext, clampf(dt * 0.2, 0.0, 1.0))
 	if body_temp < lo:
 		dmg += (lo - body_temp) * 0.06 * dt
@@ -132,7 +176,7 @@ func dead() -> bool:
 
 
 func to_data() -> Dictionary:
-	return {"hp": hp, "o2": o2, "energy": energy, "food": food, "rad": rad, "temp": body_temp}
+	return {"hp": hp, "o2": o2, "energy": energy, "food": food, "rad": rad, "temp": body_temp, "modules": modules.duplicate()}
 
 
 func from_data(d: Dictionary) -> void:
@@ -142,3 +186,8 @@ func from_data(d: Dictionary) -> void:
 	food = d.get("food", 100.0)
 	rad = d.get("rad", 0.0)
 	body_temp = d.get("temp", 20.0)
+	var ms = d.get("modules", ["", "", ""])
+	if ms is Array and ms.size() == MODULE_SLOTS:
+		modules = ms.duplicate()
+	else:
+		modules = ["", "", ""]

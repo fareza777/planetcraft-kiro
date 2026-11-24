@@ -123,7 +123,8 @@ static func _p_noise(img: Image, cols: Array[Color], seed: int, f: float, spots:
 	var n := _noise(seed, f)
 	for y in S:
 		for x in S:
-			var t := n[y * S + x] + (_h(x, y, seed) - 0.5) * 0.14
+			# low per-pixel jitter: fine speckle shimmers at distance on phone screens
+			var t := n[y * S + x] + (_h(x, y, seed) - 0.5) * 0.07
 			var c := _pal(cols, t)
 			if spots > 0.0 and _h(x, y, seed + 1) < spots:
 				c = c.darkened(0.3)
@@ -144,11 +145,14 @@ static func _p_grass_top(img: Image, cols: Array[Color], seed: int, f: float) ->
 	_p_noise(img, cols, seed, f, 0.0)
 	for y in S:
 		for x in S:
+			# sparse highlight/shadow flecks using neighbouring palette tones (was 12% of pixels
+			# at palette extremes, which read as noise from a distance)
 			var h := _h(x, y, seed + 9)
-			if h < 0.07:
-				img.set_pixel(x, y, cols[cols.size() - 1])
-			elif h < 0.12:
-				img.set_pixel(x, y, cols[0])
+			var last := cols.size() - 1
+			if h < 0.025:
+				img.set_pixel(x, y, cols[maxi(last - 1, 0)].lerp(cols[last], 0.5))
+			elif h < 0.045:
+				img.set_pixel(x, y, cols[mini(1, last)].darkened(0.08))
 
 
 static func _p_grass_side(img: Image, cols: Array[Color], seed: int, has_base: bool) -> void:
@@ -219,7 +223,9 @@ static func _p_leaves(img: Image, cols: Array[Color], seed: int, glow: Color) ->
 			if holes[i] < 0.26:
 				img.set_pixel(x, y, Color(0, 0, 0, 0))
 				continue
-			var c := _pal(cols, n[i] + (_h(x, y, seed) - 0.5) * 0.2)
+			var c := _pal(cols, n[i] + (_h(x, y, seed) - 0.5) * 0.12)
+			# lighter toward the top of the tile so canopies read as volume, not flat blobs
+			c = c.lightened(0.12 * (1.0 - y / float(S)))
 			if holes[i] < 0.32:
 				c = c.darkened(0.3)
 			if _h(x, y, seed + 4) < 0.03:

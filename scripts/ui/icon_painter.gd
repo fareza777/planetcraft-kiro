@@ -78,5 +78,14 @@ static func draw(ci: CanvasItem, name: String, c: Vector2, s: float, col: Color,
 			ci.draw_colored_polygon(PackedVector2Array([c + Vector2(-0.2, 0.25) * s, c + Vector2(0.1, 0.25) * s, c + Vector2(-0.3, 0.55) * s]), col)
 			for k in 3:
 				ci.draw_circle(c + Vector2(-0.25 + k * 0.25, -0.08) * s, s * 0.07, Color(0, 0, 0, 0.55))
+		"scan":
+			ci.draw_circle(c, s * 0.16, col)
+			ci.draw_arc(c, s * 0.42, 0, TAU, 24, col, w * 0.75, true)
+			ci.draw_arc(c, s * 0.7, -0.7, 0.7, 14, col, w * 0.75, true)
+			ci.draw_arc(c, s * 0.7, PI - 0.7, PI + 0.7, 14, col, w * 0.75, true)
+		"map":
+			ci.draw_arc(c, s * 0.58, 0, TAU, 24, col, w * 0.75, true)
+			ci.draw_colored_polygon(PackedVector2Array([c + Vector2(0, -0.46) * s, c + Vector2(0.18, 0) * s, c + Vector2(0, 0.46) * s, c + Vector2(-0.18, 0) * s]), col)
+			ci.draw_circle(c, s * 0.09, Color(0, 0, 0, 0.6))
 		_:
 			ci.draw_circle(c, s * 0.3, col)

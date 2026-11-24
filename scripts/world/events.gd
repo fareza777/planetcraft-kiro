@@ -21,6 +21,8 @@ var base_gravity := 9.0
 var creatures: Creatures
 var trial := {}
 var starfall := {}
+var raid := {}
+var _raid_cd := 180.0
 var banner := ""
 
 
@@ -137,6 +139,60 @@ func _tick_starfall(dt: float) -> void:
 		announce.emit("The starfall fades.", Color(0.7, 0.8, 1.0))
 
 
+func _tick_raid(dt: float) -> void:
+	_raid_cd = maxf(0.0, _raid_cd - dt)
+	if raid.is_empty():
+		if _raid_cd <= 0.0 and sky != null and sky.is_night() and evolution != null and creatures != null and trial.is_empty() and starfall.is_empty():
+			var poll := float(evolution.stats.get("pollution", 0.0))
+			if poll >= 0.12 and planet.get("type", "terrain") == "terrain":
+				start_raid(poll)
+		return
+	raid.t = float(raid.t) + dt
+	var alive_n := 0
+	for c in raid.alive:
+		if is_instance_valid(c) and c.alive:
+			alive_n += 1
+	banner = "⚠ NIGHT RAID · %d hive raiders remaining" % alive_n
+	if alive_n == 0:
+		raid = {}
+		banner = ""
+		_raid_cd = 320.0
+		Game.add_shards(2)
+		Game.unlock_achievement("raid_defender")
+		player.xp += 60
+		announce.emit("✦ Night Raid repelled! +60 XP · +2 Stellar Shards", Color(0.45, 1.0, 0.65))
+		sfx.play("quest", 1.0)
+	elif float(raid.t) > 120.0 or (sky != null and not sky.is_night()):
+		raid = {}
+		banner = ""
+		_raid_cd = 260.0
+		announce.emit("Dawn breaks — the hive raiders retreat.", Color(0.7, 0.9, 1.0))
+
+
+func start_raid(poll: float) -> void:
+	var count := clampi(3 + int(poll * 8.0), 3, 7)
+	var alive := []
+	var pp := player.global_position
+	for k in count:
+		var a := k * TAU / float(count) + randf() * 0.4
+		var p := pp + Vector3(cos(a) * 26.0, 0, sin(a) * 26.0)
+		var top := world.column_top(floori(p.x), floori(p.z))
+		if top <= 0:
+			continue
+		var kind := "stalker" if (k % 3 == 0 and Reg.creatures.has("stalker")) else "hive_drone"
+		var is_elite := k == 0 and poll >= 0.35
+		var c := creatures.spawn(kind, Vector3(p.x, top + 1.2, p.z), false, is_elite)
+		if c != null:
+			c.state = "chase"
+			alive.append(c)
+	if alive.is_empty():
+		return
+	raid = {"alive": alive, "t": 0.0}
+	announce.emit("⚠ POLLUTION ALERT — Night Hive Raid approaching your colony! Turrets & lights help defend.", Color(1.0, 0.35, 0.45))
+	sfx.play("growl", 2.0, 0.85)
+	player.shake(0.4)
+
+
 func storm_color() -> Color:
 	match weather:
 		"dust_storm": return Color(0.75, 0.5, 0.3)
@@ -189,6 +245,7 @@ func _process(dt: float) -> void:
 	player.gravity = base_gravity * (0.45 + 0.35 * sin(Time.get_ticks_msec() * 0.0004) if weather == "gravity_anomaly" else 1.0)
 	_tick_trial(dt)
 	_tick_starfall(dt)
+	_tick_raid(dt)
 	if weather == "meteor_shower":
 		_meteor_t -= dt
 		if _meteor_t <= 0.0:

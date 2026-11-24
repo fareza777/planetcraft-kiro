@@ -44,6 +44,8 @@ func _layout() -> void:
 		"mine": {"pos": Vector2(w - 250 * k, h - 105 * k), "r": 56.0 * k, "label": "MINE", "icon": "mine", "col": Color(1.0, 0.69, 0.18)},
 		"use": {"pos": Vector2(w - 125 * k, h - 305 * k), "r": 50.0 * k, "label": "USE", "icon": "use", "col": Color(0.48, 1.0, 0.6)},
 		"sprint": {"pos": Vector2(w - 265 * k, h - 250 * k), "r": 40.0 * k, "label": "RUN", "icon": "run", "col": Color(0.85, 0.75, 1.0)},
+		"scan": {"pos": Vector2(w - 255 * k, h - 355 * k), "r": 36.0 * k, "label": "SCAN", "icon": "scan", "col": Color(0.25, 0.92, 1.0)},
+		"map": {"pos": Vector2(w - 240, 50), "r": 36.0, "label": "", "icon": "map", "col": Color(1.0, 0.78, 0.3)},
 		"inv": {"pos": Vector2(w - 150, 50), "r": 36.0, "label": "", "icon": "bag", "col": Color(0.31, 0.89, 1.0)},
 		"menu": {"pos": Vector2(w - 60, 50), "r": 36.0, "label": "", "icon": "pause", "col": Color(0.9, 0.95, 1.0)},
 	}
@@ -139,6 +141,7 @@ func _on_button(n: String, down: bool) -> void:
 		"use":
 			if down:
 				player.ctl.place = true
+			player.ctl.hold_place = down
 		"sprint":
 			if down:
 				sprint_toggle = not sprint_toggle
